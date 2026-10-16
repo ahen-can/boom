@@ -1,36 +1,58 @@
 # Deck builder for ChatPwC
 
-Goal: a ChatPwC skill + agent that turns RFPs and client material into PwC-style decks built from
-human-made slide patterns. This folder currently holds Step 0, a probe that checks what ChatPwC's
-code environment can do.
+A ChatPwC skill that turns RFPs, briefs and notes into draft PowerPoint decks. The model writes
+the storyline and the words; fixed Python scripts build the slides by copying human-made pattern
+slides and filling their `{{slots}}`, so the result looks like your team's work.
 
-## Step 0: run the probe
+## What is here
 
-1. Download `dist/pptx-probe.zip` (GitHub: open the file, then "Download raw file").
-2. ChatPwC → Skills → **Upload skill** → `pptx-probe.zip`.
-   If the upload is rejected, try `dist/pptx-probe-flat.zip` (same files, `SKILL.md` at the zip root).
-3. Agent builder → new agent "Deck probe". Model: GPT-6.1 Sol. Turn on **Run Code** and **Skills**,
-   then **Add Skills** → `pptx-probe`. Save.
-4. In a chat with that agent: `Run the pptx probe and show me the full report.`
-5. Copy the JSON report back to Claude, and download and open `probe_xml.pptx` and `probe_pptx.pptx`.
+| Path | What it is |
+|---|---|
+| `dist/pwc-deck-builder.zip` | The skill, ready to upload (dummy brand-neutral patterns and icons) |
+| `skill/pwc-deck-builder/` | The skill source: `SKILL.md`, `scripts/`, `references/`, `assets/` |
+| `agent/instructions.md` | What to paste into the ChatPwC agent builder |
+| `docs/PATTERNS_GUIDE.md` | How to turn your best slides into the pattern library |
+| `docs/LAPTOP_SETUP.md` | How to build the real zip on your laptop with your private files |
+| `tests/` | End-to-end tests and a sample plan |
+| `probe-skill/`, `dist/pptx-probe*.zip` | Step 0: the sandbox probe (passed) |
 
-### Reading the summary
+## How a deck gets made
 
-| Key | Meaning if `true` | If `false` |
-|---|---|---|
-| `skill_files_visible` | Scripts, template and icons can ship inside the skill zip | Ship assets via "Upload to Code Environment", or run locally |
-| `python_pptx` | python-pptx is available (pre-installed or installed by the probe) | Builder uses the pure-XML path, or run locally |
-| `xml_edit_ok` | Editing slide XML directly works | Something is wrong with file access |
-| `pptx_write_ok` | Decks can be written with python-pptx | See `python_pptx` |
-| `libreoffice` | Slides can be rendered to images for visual checks | You do the visual check in PowerPoint |
-| `pypi_reachable` | Packages can be pip-installed | Only pre-installed packages can be used |
+1. Upload the RFP or notes to the Deck Builder agent.
+2. The agent writes a brief and a storyline table (headline + pattern per slide) and waits.
+3. You approve or edit the storyline.
+4. The agent writes `plan.json` and runs `build_deck.py`, which copies the chosen pattern slides,
+   fills the slots, removes unused items, swaps icons, then runs `check_deck.py`.
+5. `check_deck.py` fails the deck on leftover slots, text overflow and banned phrases, and warns on
+   label-style titles, missing sources, repeated patterns and off-template fonts. The agent fixes the plan
+   and rebuilds.
+6. `render.py` makes slide images and a contact sheet; you get the .pptx.
 
-### Running locally instead
+## Getting started
 
-`python deck-builder/probe-skill/pptx-probe/scripts/probe.py` runs the same checks on your laptop
-and writes the two test decks to the current folder.
+1. Upload `dist/pwc-deck-builder.zip` in ChatPwC (Skills → Upload skill).
+2. Create the agent from `agent/instructions.md`.
+3. Try "Build a proposal deck from this RFP" with a test document. The dummy patterns are
+   TITLE, SECTION, OBJ_3COL, OBJ_NUMBERED_4, APPROACH_CHEVRON_4 and TWO_COL.
+4. Build your real pattern library (`docs/PATTERNS_GUIDE.md`), then the real zip
+   (`docs/LAPTOP_SETUP.md`), and upload that instead.
 
-## Rebuilding the zip
+## Scripts
 
-`python deck-builder/scripts/make_probe_zip.py` regenerates `assets/probe.pptx`, `SKILL.md`
-(which embeds a copy of `probe.py`, so edit `probe.py` and rebuild) and both zips.
+All in `skill/pwc-deck-builder/scripts/`, Python 3.10+ with python-pptx.
+
+| Script | Use |
+|---|---|
+| `build_deck.py plan.json` | Build a deck (add `--validate-only` to check the plan) |
+| `check_deck.py deck.pptx` | Quality checks |
+| `render.py deck.pptx` | PNG per slide and a contact sheet (needs LibreOffice) |
+| `inventory.py deck.pptx` | Shapes, names, positions, text; `--layouts` for template layouts; `--catalogue` for the pattern catalogue |
+| `prep_patterns.py slides.pptx` | Propose slots and shape names for human slides |
+| `extract_storylines.py --folder decks/` | Section order and headlines from past decks |
+
+Tests: `pip install pytest && python -m pytest deck-builder/tests -q`
+
+Rebuild the dummy assets: `python deck-builder/scripts/make_dummy_assets.py`, then
+`python deck-builder/scripts/make_skill_zip.py`.
+
+Credits and licences: `THIRD_PARTY_NOTICES.md`.

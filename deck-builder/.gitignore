@@ -1,0 +1,4 @@
+private/
+*_render/
+__pycache__/
+*.pyc
