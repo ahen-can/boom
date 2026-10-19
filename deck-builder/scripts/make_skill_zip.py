@@ -1,14 +1,16 @@
-"""Package the pwc-deck-builder skill as a zip for ChatPwC's "Upload skill".
+"""Package the deck-pattern-builder skill as a zip for ChatPwC's "Upload skill".
 
     python deck-builder/scripts/make_skill_zip.py                       # dummy assets from the repo
     python deck-builder/scripts/make_skill_zip.py --private private      # your real files (see docs/LAPTOP_SETUP.md)
     python deck-builder/scripts/make_skill_zip.py --patterns my_patterns.pptx --icons my_icons/ \
         --storylines storylines.md --style-guide style_guide.md --out dist/
+    python deck-builder/scripts/make_skill_zip.py --private private --name my-deck-builder   # another skill name
 
 Real files override the repo's dummy ones in the zip only; the repo is never changed. The pattern
 catalogue is regenerated from whichever patterns.pptx goes in.
 """
 import argparse
+import re
 import shutil
 import subprocess
 import sys
@@ -18,14 +20,18 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
-SKILL_SRC = ROOT / "skill" / "pwc-deck-builder"
-NAME = "pwc-deck-builder"
+SKILL_SRC = ROOT / "skill" / "deck-pattern-builder"
+NAME = "deck-pattern-builder"
 LIMIT_MB = 50
 
 
 def stage(args) -> Path:
-    tmp = Path(tempfile.mkdtemp(prefix="skillzip_")) / NAME
+    tmp = Path(tempfile.mkdtemp(prefix="skillzip_")) / args.name
     shutil.copytree(SKILL_SRC, tmp, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"))
+    if args.name != NAME:  # the skill name appears in SKILL.md's frontmatter and paths
+        md = tmp / "SKILL.md"
+        md.write_text(md.read_text(encoding="utf-8").replace(NAME, args.name), encoding="utf-8")
+        print(f"  skill name: {args.name}")
     priv = Path(args.private) if args.private else None
 
     def pick(explicit, private_name):
@@ -83,12 +89,12 @@ def validate(skill: Path):
     print(f"  {len(pats)} patterns: {', '.join(sorted(pats))}")
 
 
-def zip_dir(skill: Path, dest: Path):
+def zip_dir(skill: Path, dest: Path, name: str):
     dest.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as z:
         for p in sorted(skill.rglob("*")):
             if p.is_file() and "__pycache__" not in p.parts:
-                z.write(p, Path(NAME) / p.relative_to(skill))
+                z.write(p, Path(name) / p.relative_to(skill))
     mb = dest.stat().st_size / 1e6
     print(f"wrote {dest} ({mb:.1f} MB)")
     if mb > LIMIT_MB:
@@ -105,10 +111,13 @@ def main():
     ap.add_argument("--style-guide")
     ap.add_argument("--writing-rules")
     ap.add_argument("--out", default=str(ROOT / "dist"))
+    ap.add_argument("--name", default=NAME, help=f"skill name (default {NAME}); lowercase letters, digits, hyphens")
     a = ap.parse_args()
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", a.name):
+        ap.error("--name must be lowercase letters, digits and hyphens, e.g. my-deck-builder")
     skill = stage(a)
     validate(skill)
-    zip_dir(skill, Path(a.out) / f"{NAME}.zip")
+    zip_dir(skill, Path(a.out) / f"{a.name}.zip", a.name)
     shutil.rmtree(skill.parent, ignore_errors=True)
 
 

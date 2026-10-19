@@ -39,7 +39,7 @@ The keywords are how the agent finds an icon from words like "risk management".
 
 ## Storylines
 
-    python deck-builder/skill/pwc-deck-builder/scripts/extract_storylines.py --folder deck-builder/private/past_decks --out deck-builder/private/storylines.md
+    python deck-builder/skill/deck-pattern-builder/scripts/extract_storylines.py --folder deck-builder/private/past_decks --out deck-builder/private/storylines.md
 
 Open the result and delete anything confidential that should not sit in the skill. Headlines and
 section orders are what matter.
@@ -49,12 +49,12 @@ section orders are what matter.
     python deck-builder/scripts/make_skill_zip.py --private deck-builder/private
 
 It prints which of your files it used, the patterns it found and the zip size, and writes
-`deck-builder/dist/pwc-deck-builder.zip`. It stops if the zip is over 50 MB (compress the pictures
+`deck-builder/dist/deck-pattern-builder.zip`. It stops if the zip is over 50 MB (compress the pictures
 in patterns.pptx with File → Compress Pictures).
 
 ## Test locally before uploading
 
-    python deck-builder/skill/pwc-deck-builder/scripts/build_deck.py deck-builder/tests/sample_plan.json --patterns deck-builder/private/patterns.pptx --icons deck-builder/private/icons --out deck-builder/private/out
+    python deck-builder/skill/deck-pattern-builder/scripts/build_deck.py deck-builder/tests/sample_plan.json --patterns deck-builder/private/patterns.pptx --icons deck-builder/private/icons --out deck-builder/private/out
 
 The sample plan uses the dummy pattern IDs, so it will list unknown patterns. Copy it, change the
 pattern IDs and slot names to yours (see the catalogue), and run it again until it builds. Open the
@@ -62,8 +62,8 @@ result in PowerPoint.
 
 ## Upload to ChatPwC
 
-1. Skills → find `pwc-deck-builder` → delete the old version (if any).
-2. Upload skill → `deck-builder/dist/pwc-deck-builder.zip`.
-3. Open the Deck Builder agent and check `pwc-deck-builder` is still in its skills list.
+1. Skills → find `deck-pattern-builder` → delete the old version (if any).
+2. Upload skill → `deck-builder/dist/deck-pattern-builder.zip`.
+3. Open the Deck Builder agent and check `deck-pattern-builder` is still in its skills list.
 
 Repeat "Build the zip" and "Upload" every time you add patterns, icons or rules.

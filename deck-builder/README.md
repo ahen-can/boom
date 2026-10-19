@@ -8,8 +8,8 @@ slides and filling their `{{slots}}`, so the result looks like your team's work.
 
 | Path | What it is |
 |---|---|
-| `dist/pwc-deck-builder.zip` | The skill, ready to upload (dummy brand-neutral patterns and icons) |
-| `skill/pwc-deck-builder/` | The skill source: `SKILL.md`, `scripts/`, `references/`, `assets/` |
+| `dist/deck-pattern-builder.zip` | The skill, ready to upload (dummy brand-neutral patterns and icons) |
+| `skill/deck-pattern-builder/` | The skill source: `SKILL.md`, `scripts/`, `references/`, `assets/` |
 | `agent/instructions.md` | What to paste into the ChatPwC agent builder |
 | `docs/PATTERNS_GUIDE.md` | How to turn your best slides into the pattern library |
 | `docs/LAPTOP_SETUP.md` | How to build the real zip on your laptop with your private files |
@@ -30,7 +30,7 @@ slides and filling their `{{slots}}`, so the result looks like your team's work.
 
 ## Getting started
 
-1. Upload `dist/pwc-deck-builder.zip` in ChatPwC (Skills → Upload skill).
+1. Upload `dist/deck-pattern-builder.zip` in ChatPwC (Skills → Upload skill).
 2. Create the agent from `agent/instructions.md`.
 3. Try "Build a proposal deck from this RFP" with a test document. The dummy patterns are
    TITLE, SECTION, OBJ_3COL, OBJ_NUMBERED_4, APPROACH_CHEVRON_4, TWO_COL and GOV_MATRIX.
@@ -39,7 +39,7 @@ slides and filling their `{{slots}}`, so the result looks like your team's work.
 
 ## Scripts
 
-All in `skill/pwc-deck-builder/scripts/`, Python 3.10+ with python-pptx.
+All in `skill/deck-pattern-builder/scripts/`, Python 3.10+ with python-pptx.
 
 | Script | Use |
 |---|---|

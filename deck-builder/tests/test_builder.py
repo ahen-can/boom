@@ -11,7 +11,7 @@ import pytest
 from pptx import Presentation
 
 ROOT = Path(__file__).resolve().parent.parent
-SKILL = ROOT / "skill" / "pwc-deck-builder"
+SKILL = ROOT / "skill" / "deck-pattern-builder"
 SCRIPTS = SKILL / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 

@@ -1,5 +1,5 @@
 ---
-name: pwc-deck-builder
+name: deck-pattern-builder
 description: Build PowerPoint proposal and client decks from RFPs, briefs, notes or other uploaded material, using the firm's template and a library of human-made slide patterns. Use when the user asks for a deck, presentation, slides, storyline or proposal in PowerPoint, or wants slides restyled into house patterns.
 ---
 
@@ -12,8 +12,8 @@ patterns, say so.
 
 ## Files
 
-The skill folder is usually `/mnt/data/skills/pwc-deck-builder/`. If not, find it with
-`find / -name build_deck.py -path "*pwc-deck-builder*" 2>/dev/null`. Below, `$SKILL` means that folder.
+The skill folder is usually `/mnt/data/skills/deck-pattern-builder/`. If not, find it with
+`find / -name build_deck.py -path "*deck-pattern-builder*" 2>/dev/null`. Below, `$SKILL` means that folder.
 
 - `references/catalogue.md`: every pattern, what it is for, its slots and word capacity. Read before planning.
 - `references/style_guide.md`: storyline flow, rhythm, density. Read before planning.

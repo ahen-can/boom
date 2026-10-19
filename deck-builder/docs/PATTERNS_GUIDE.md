@@ -67,7 +67,7 @@ Shape names (Home → Arrange → Selection Pane, or Alt+F10) are needed only fo
 Keep the slides with their real text (the script records it as an example for each slot) and run,
 from the repo folder in PowerShell:
 
-    python deck-builder\skill\pwc-deck-builder\scripts\prep_patterns.py deck-builder\private\patterns_original.pptx --out deck-builder\private\prep
+    python deck-builder\skill\deck-pattern-builder\scripts\prep_patterns.py deck-builder\private\patterns_original.pptx --out deck-builder\private\prep
 
 Always run it on the original slides, never on a tokenised copy. You get three files:
 
@@ -104,7 +104,7 @@ let the ChatPwC agent draft them:
 3. Open the CSV in Excel, fix what you disagree with (rename IDs, change DROP decisions), and apply it
    yourself:
 
-       python deck-builder\skill\pwc-deck-builder\scripts\apply_notes.py deck-builder\private\prep\patterns_original_tokenised.pptx deck-builder\private\prep\patterns_original_notes.csv --out deck-builder\private\patterns.pptx
+       python deck-builder\skill\deck-pattern-builder\scripts\apply_notes.py deck-builder\private\prep\patterns_original_tokenised.pptx deck-builder\private\prep\patterns_original_notes.csv --out deck-builder\private\patterns.pptx
 
 The notes it writes look like this (you can also edit them in PowerPoint):
 
@@ -122,7 +122,7 @@ The notes it writes look like this (you can also edit them in PowerPoint):
 
 ## 7. Check it
 
-    python deck-builder/skill/pwc-deck-builder/scripts/inventory.py private/patterns.pptx --catalogue
+    python deck-builder/skill/deck-pattern-builder/scripts/inventory.py private/patterns.pptx --catalogue
 
 This prints the catalogue the agent will read: every pattern, its slots and a word capacity per
 slot. If a slot is missing or a capacity looks wrong, fix the slide. Then build the zip

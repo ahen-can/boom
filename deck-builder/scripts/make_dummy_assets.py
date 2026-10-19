@@ -13,7 +13,7 @@ from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.util import Inches, Pt
 
-SKILL = Path(__file__).resolve().parent.parent / "skill" / "pwc-deck-builder"
+SKILL = Path(__file__).resolve().parent.parent / "skill" / "deck-pattern-builder"
 ASSETS = SKILL / "assets"
 ICONS = ASSETS / "icons"
 

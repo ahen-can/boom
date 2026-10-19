@@ -1,7 +1,7 @@
 # Third-party notices
 
 ## pstack `unslop` (MIT)
-`skill/pwc-deck-builder/references/writing_rules.md` adapts rules from the `unslop` skill, and
+`skill/deck-pattern-builder/references/writing_rules.md` adapts rules from the `unslop` skill, and
 `.claude/skills/unslop/` contains it unchanged (commit 6f131f1 of github.com/backnotprop/pstack).
 Copyright (c) 2026 Lauren Tan. MIT licence: see `.claude/skills/unslop/LICENSE`.
 
