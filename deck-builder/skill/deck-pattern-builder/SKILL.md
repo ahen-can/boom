@@ -40,9 +40,12 @@ there, ask them to attach it with the paperclip's code environment upload option
    `python $SKILL/scripts/build_deck.py /mnt/data/plan.json`
    The result includes the check report. Fix every error by editing plan.json (shorten text, split a
    slide, change pattern) and rebuild. Look at the warnings and fix those that apply.
-5. **Look at it.** `python $SKILL/scripts/render.py /mnt/data/<deck>.pptx` makes one PNG per slide and a
-   contact sheet. If you can view images, check each slide for overflow, overlaps and empty areas, fix,
-   and rebuild. Show the contact sheet to the user.
+5. **Look at it.** `python $SKILL/scripts/render.py /mnt/data/<deck>.pptx --slides 1-15` makes one PNG per
+   slide and contact sheets of 12 slides. For longer decks run the `next_chunk` it prints until all slides
+   are done; never render more than 15 slides in one run. If you can view images, check each slide for
+   overflow, overlaps and empty areas, fix, and rebuild. Show the contact sheets to the user.
+   If rendering fails, run `python $SKILL/scripts/render.py --diagnose`, show the user both JSON outputs
+   in full, and carry on with the hand-over: a failed render never blocks delivering the .pptx.
 6. **Hand over.** Give the .pptx link from /mnt/data and a short list of what still needs a human:
    `[ICON: ...]` placeholders, warnings you left in place, facts you could not verify, open questions.
 
@@ -70,7 +73,8 @@ When the user asks for changes, edit plan.json and rebuild. Do not edit the .ppt
      file-search text: ask the user to attach both again with the paperclip's code environment / code
      interpreter upload option, not File Search.
   1. For each CSV row, read `slots` and `examples` (the human text each slot replaced). If you can
-     view images, render the deck with render.py and look at each slide too.
+     view images, render the deck 15 slides at a time (`render.py <deck> --slides 1-15`, then the
+     `next_chunk` it prints) and look at each slide too.
   2. Fill `pattern` (a unique ID in capitals describing the layout: `OBJ_3COL_ICONS`, `GOV_MATRIX_3`,
      `TIMELINE_GANTT_6`; every objectives layout starts with `OBJ_`), `purpose` (one line, what the
      slide shows), `use_when` (when a deck needs it), `items` (for example `2-4`) and `avoid` (when not to

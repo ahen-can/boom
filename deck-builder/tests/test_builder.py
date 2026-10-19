@@ -168,7 +168,12 @@ def test_render(tmp_path, built):
     out = subprocess.run([sys.executable, str(SCRIPTS / "render.py"), result["output"], "--out", str(tmp_path)],
                          check=True, capture_output=True, text=True, timeout=300).stdout
     data = json.loads(out)
-    assert len(data["slides"]) == len(PLAN["slides"]) and Path(data["contact_sheet"]).is_file()
+    assert data["ok"] and len(data["slide_images"]) == len(PLAN["slides"])
+    assert all(Path(p).is_file() for p in data["contact_sheets"])
+    part = json.loads(subprocess.run([sys.executable, str(SCRIPTS / "render.py"), result["output"], "--slides", "2-3",
+                                      "--out", str(tmp_path / "part")], check=True, capture_output=True, text=True,
+                                     timeout=300).stdout)
+    assert part["slides_rendered"] == f"2-3 of {len(PLAN['slides'])}" and part["next_chunk"] == "--slides 4-5"
 
 
 def test_table_rows_filled_and_pruned(built):
