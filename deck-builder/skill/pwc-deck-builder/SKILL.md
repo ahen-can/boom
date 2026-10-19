@@ -59,7 +59,19 @@ When the user asks for changes, edit plan.json and rebuild. Do not edit the .ppt
 - "Which patterns do we have?": summarise catalogue.md.
 - "Describe this deck": `python $SKILL/scripts/inventory.py <deck>` (shapes, text, positions) or
   `--layouts` (template layouts and placeholders).
-- "Turn these slides into patterns": `python $SKILL/scripts/prep_patterns.py <deck> --out /mnt/data`, then
-  share the tokenised deck and the report for the user to review in PowerPoint.
+- "Turn these slides into patterns": `python $SKILL/scripts/prep_patterns.py <deck> --out /mnt/data`.
+  It writes `<name>_tokenised.pptx`, `<name>_prep_report.md` and `<name>_notes.csv`. Share all three and
+  point out the slides the report lists under "needing a manual look".
+- "Describe the patterns" (the user uploads `<name>_tokenised.pptx` and `<name>_notes.csv`):
+  1. For each CSV row, read `slots` and `examples` (the human text each slot replaced). If you can
+     view images, render the deck with render.py and look at each slide too.
+  2. Fill `pattern` (a unique ID in capitals describing the layout: `OBJ_3COL_ICONS`, `GOV_MATRIX_3`,
+     `TIMELINE_GANTT_6`; every objectives layout starts with `OBJ_`), `purpose` (one line, what the
+     slide shows), `use_when` (when a deck needs it), `items` (for example `2-4`) and `avoid` (when not to
+     use it). Put `DROP` as the pattern for slides that duplicate another pattern or are too
+     client-specific to reuse. Work in batches of 20 rows and save the CSV after each batch.
+  3. Run `python $SKILL/scripts/apply_notes.py <tokenised.pptx> <notes.csv> --out /mnt/data/patterns.pptx`,
+     fix any errors it lists, then show `python $SKILL/scripts/inventory.py /mnt/data/patterns.pptx --catalogue`.
+  4. Give the user `patterns.pptx` and the filled CSV to review.
 - "Learn from these decks": `python $SKILL/scripts/extract_storylines.py <decks...> --out /mnt/data/storylines.md`
   and share it. The user reviews it and adds it to the skill.

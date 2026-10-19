@@ -33,7 +33,7 @@ slides and filling their `{{slots}}`, so the result looks like your team's work.
 1. Upload `dist/pwc-deck-builder.zip` in ChatPwC (Skills → Upload skill).
 2. Create the agent from `agent/instructions.md`.
 3. Try "Build a proposal deck from this RFP" with a test document. The dummy patterns are
-   TITLE, SECTION, OBJ_3COL, OBJ_NUMBERED_4, APPROACH_CHEVRON_4 and TWO_COL.
+   TITLE, SECTION, OBJ_3COL, OBJ_NUMBERED_4, APPROACH_CHEVRON_4, TWO_COL and GOV_MATRIX.
 4. Build your real pattern library (`docs/PATTERNS_GUIDE.md`), then the real zip
    (`docs/LAPTOP_SETUP.md`), and upload that instead.
 
@@ -47,7 +47,8 @@ All in `skill/pwc-deck-builder/scripts/`, Python 3.10+ with python-pptx.
 | `check_deck.py deck.pptx` | Quality checks |
 | `render.py deck.pptx` | PNG per slide and a contact sheet (needs LibreOffice) |
 | `inventory.py deck.pptx` | Shapes, names, positions, text; `--layouts` for template layouts; `--catalogue` for the pattern catalogue |
-| `prep_patterns.py slides.pptx` | Propose slots and shape names for human slides |
+| `prep_patterns.py slides.pptx` | Add slots (text, tables), name items and icons, record example text, write a notes CSV |
+| `apply_notes.py deck.pptx notes.csv` | Write pattern IDs and descriptions from the CSV into the notes (`DROP` removes a slide) |
 | `extract_storylines.py --folder decks/` | Section order and headlines from past decks |
 
 Tests: `pip install pytest && python -m pytest deck-builder/tests -q`

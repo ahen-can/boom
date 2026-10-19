@@ -15,7 +15,9 @@ storylines stay on your laptop and only go into the zip you upload to ChatPwC.
 
        deck-builder/
          private/
-           patterns.pptx        your pattern library (docs/PATTERNS_GUIDE.md)
+           patterns_original.pptx  your slides with their real text (input to prep_patterns.py)
+           prep/                   prep_patterns.py output: tokenised deck, report, notes CSV
+           patterns.pptx           the finished library (after apply_notes.py, docs/PATTERNS_GUIDE.md)
            icons/               PNG icons + icons_index.csv
            storylines.md        from extract_storylines.py
            style_guide.md       optional: your edited copy of references/style_guide.md

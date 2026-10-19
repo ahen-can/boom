@@ -87,8 +87,10 @@ def catalogue(prs) -> str:
         "Generated from assets/patterns.pptx by `inventory.py --catalogue`. Do not edit by hand: change the",
         "pattern slide's speaker notes (PATTERN / PURPOSE / USE WHEN / ITEMS) and regenerate.",
         "",
-        "Slots: fill these keys in plan.json. `~N words` is a rough capacity at the template font size.",
+        "Slots: fill these keys in plan.json. `~Nw` is a rough capacity in words at the template font size,",
+        "and the quoted text is what a human wrote there originally: match its length and kind, never copy it.",
         "Item slots (`itemN_...`) can be left out from the end: unused items are removed with their shapes.",
+        "Tables (`t1`, `t2`) take a list of rows, header row first; rows you do not give are removed.",
         "",
     ]
     for s in prs.slides:
@@ -96,18 +98,32 @@ def catalogue(prs) -> str:
         if not pid:
             continue
         meta = dk.pattern_meta(s)
+        examples = dk.pattern_examples(s)
+        tables = dk.table_dims(s)
         lines.append(f"## {pid}")
         for key in ("PURPOSE", "USE WHEN", "ITEMS", "AVOID"):
             if meta.get(key):
                 lines.append(f"- **{key.title()}:** {meta[key]}")
         slots, icons = [], []
         for shp, _ in dk.iter_shapes(s.shapes):
+            if getattr(shp, "has_table", False) and shp.has_table:
+                continue
             for t in dk.tokens_in(shp):
                 cap = dk.capacity_words(shp) if getattr(shp, "has_text_frame", False) and shp.has_text_frame else None
-                slots.append(f"`{t}`" + (f" (~{cap} words)" if cap else ""))
+                ex = examples.get(t)
+                detail = ", ".join(x for x in (f"~{cap}w" if cap else "", f'"{ex[:40]}"' if ex else "") if x)
+                slots.append(f"`{t}`" + (f" ({detail})" if detail else ""))
             if "icon" in (shp.name or "").lower():
                 icons.append(f"`{shp.name}`")
         lines.append(f"- **Slots:** {', '.join(slots) if slots else 'none'}")
+        for t, (rows, cols) in sorted(tables.items()):
+            sample = []
+            for r in (1, 2):
+                cells = [examples.get(f"{t}_r{r}c{c}", "")[:25] for c in range(1, cols + 1)]
+                if any(cells):
+                    sample.append("[" + " | ".join(cells) + "]")
+            lines.append(f"- **Table `{t}`:** {rows} rows x {cols} columns"
+                         + (f", e.g. {' '.join(sample)}" if sample else ""))
         if icons:
             lines.append(f"- **Icons:** {', '.join(icons)}")
         lines.append("")

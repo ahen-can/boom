@@ -39,15 +39,32 @@ def validate(plan: dict, patterns: dict) -> tuple[list[str], list[str]]:
         tokens = set(dk.slide_tokens(pslide))
         icon_shapes = {shp.name for shp, _ in dk.iter_shapes(pslide.shapes) if ICON_KEY_RE.search(shp.name or "")}
         fill = s.get("fill", {})
-        unknown = [k for k in fill if k not in tokens]
+        tables = dk.table_dims(pslide)
+        plain = sorted(t for t in tokens if not dk.TABLE_TOKEN_RE.match(t))
+        unknown = [k for k in fill if k not in tokens and k not in tables]
         if unknown:
-            errors.append(f"slide {n} ({pid}): unknown slots {unknown}. This pattern has: {sorted(tokens)}")
+            errors.append(f"slide {n} ({pid}): unknown slots {unknown}. This pattern has: {plain}"
+                          + (f" and tables {sorted(tables)}" if tables else ""))
+        for t, (rows, cols) in tables.items():
+            v = fill.get(t)
+            if v is None:
+                continue
+            if not isinstance(v, list) or not all(isinstance(r, list) for r in v):
+                errors.append(f"slide {n} ({pid}): table '{t}' must be a list of rows, each a list of cells")
+                continue
+            if len(v) > rows:
+                errors.append(f"slide {n} ({pid}): table '{t}' has {rows} rows, plan gives {len(v)}. "
+                              "Split the content over two slides or merge rows.")
+            if any(len(r) > cols for r in v):
+                errors.append(f"slide {n} ({pid}): table '{t}' has {cols} columns, a row in the plan has more")
         bad_icons = [k for k in s.get("icons", {}) if k not in icon_shapes]
         if bad_icons:
             errors.append(f"slide {n} ({pid}): no icon shapes named {bad_icons}. Icon shapes: {sorted(icon_shapes)}")
         if "title" in tokens and not (fill.get("title") or defaults.get("title")):
             warnings.append(f"slide {n} ({pid}): no title")
         for k, v in fill.items():
+            if k in tables:
+                continue
             if not isinstance(v, (str, list, int, float)) and v is not None:
                 errors.append(f"slide {n}: slot '{k}' must be text or a list of text")
     return errors, warnings
@@ -75,7 +92,8 @@ def build(plan: dict, patterns_path: Path, icons_dir: Path, out_dir: Path) -> di
             values["tracker"] = spec["section"]
         values.update(spec.get("fill", {}))
         filled, unfilled = dk.fill_tokens(slide, values)
-        for note in dk.prune_unused(slide, filled, unfilled):
+        _, rows_given = dk.expand_tables(values)
+        for note in dk.prune_unused(slide, filled, unfilled, rows_given):
             log.append(f"slide {n}: {note}")
         for shape_name, query in spec.get("icons", {}).items():
             png = dk.find_icon(query, icons_dir, icon_index) if icon_index else None

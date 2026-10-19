@@ -136,7 +136,13 @@ def test_prep_patterns_round_trip(tmp_path, built):
     assert {"title", "tracker", "source", "item1_head", "item1_body", "item3_body"} <= set(toks)
     names = {s.name for s, _ in dk.iter_shapes(prs.slides[3].shapes)}
     assert {"item1_icon", "item2_icon", "item3_icon"} <= names
-    assert dk.pattern_id(prs.slides[3]) == "SLIDE_04"
+    assert dk.pattern_id(prs.slides[3]) == "SLIDE_004"
+    assert dk.pattern_examples(prs.slides[3])["item1_head"] == "Close in 6 days"
+    assert dk.pattern_meta(prs.slides[3]).get("PURPOSE") is None  # empty field is not misread
+    # table: every cell tokenised, empty ones too
+    assert dk.table_dims(prs.slides[6])["t1"] == (5, 4)
+    assert "t1_r4c2" in dk.slide_tokens(prs.slides[6])  # was an empty cell
+    assert (tmp_path / "human_notes.csv").is_file()
 
 
 def test_storylines(tmp_path, built):
@@ -163,3 +169,59 @@ def test_render(tmp_path, built):
                          check=True, capture_output=True, text=True, timeout=300).stdout
     data = json.loads(out)
     assert len(data["slides"]) == len(PLAN["slides"]) and Path(data["contact_sheet"]).is_file()
+
+
+def test_table_rows_filled_and_pruned(built):
+    result, prs = built
+    slide = prs.slides[6]
+    tbl = dk.find_shape(slide, "t1").table
+    assert len(tbl.rows) == 5  # 7 in the pattern, plan gave 5
+    assert tbl.cell(0, 1).text == "Weekly huddle"
+    assert tbl.cell(4, 3).text == "\u2713" and tbl.cell(4, 1).text == ""
+    assert any("removed 2 unused row(s)" in line for line in result["log"])
+
+
+def test_table_too_many_rows_is_an_error(tmp_path):
+    plan = {"slides": [{"pattern": "GOV_MATRIX", "fill": {"title": "x y z w", "t1": [["a"]] * 9}}]}
+    result = build_deck.build(plan, PATTERNS, ICONS, tmp_path)
+    assert not result["ok"] and any("has 7 rows" in e for e in result["errors"])
+
+
+def test_apply_notes(tmp_path, built):
+    import csv
+    result, _ = built
+    deck = tmp_path / "human.pptx"
+    shutil.copy(result["output"], deck)
+    subprocess.run([sys.executable, str(SCRIPTS / "prep_patterns.py"), str(deck), "--out", str(tmp_path)],
+                   check=True, capture_output=True)
+    csv_path = tmp_path / "human_notes.csv"
+    rows = list(csv.DictReader(csv_path.open(encoding="utf-8-sig")))
+    names = ["COVER", "DIVIDER", "DROP", "OBJ_ICONS_3", "OBJ_NUMBERED", "APPROACH_PHASES", "GOV_TABLE"]
+    for r, n in zip(rows, names):
+        r.update(pattern=n, purpose=f"purpose of {n}", use_when="when needed")
+    with csv_path.open("w", newline="", encoding="utf-8-sig") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+    out = tmp_path / "patterns.pptx"
+    subprocess.run([sys.executable, str(SCRIPTS / "apply_notes.py"), str(tmp_path / "human_tokenised.pptx"),
+                    str(csv_path), "--out", str(out)], check=True, capture_output=True)
+    prs = Presentation(str(out))
+    assert len(prs.slides) == 6
+    pats = dk.index_patterns(prs)
+    assert set(pats) == {"COVER", "DIVIDER", "OBJ_ICONS_3", "OBJ_NUMBERED", "APPROACH_PHASES", "GOV_TABLE"}
+    gov = pats["GOV_TABLE"][1]
+    assert dk.pattern_meta(gov)["PURPOSE"] == "purpose of GOV_TABLE"
+    assert dk.pattern_examples(gov)["t1_r1c2"] == "Weekly huddle"
+    cat = subprocess.run([sys.executable, str(SCRIPTS / "inventory.py"), str(out), "--catalogue"],
+                         check=True, capture_output=True, text=True).stdout
+    assert "**Table `t1`:** 5 rows x 4 columns" in cat and '"Close in 6 days"' in cat
+
+    rows[1]["pattern"] = "COVER"  # duplicate ID: nothing written
+    with csv_path.open("w", newline="", encoding="utf-8-sig") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+    r = subprocess.run([sys.executable, str(SCRIPTS / "apply_notes.py"), str(tmp_path / "human_tokenised.pptx"),
+                        str(csv_path), "--out", str(tmp_path / "x.pptx")], capture_output=True, text=True)
+    assert r.returncode == 1 and "must be unique" in r.stdout

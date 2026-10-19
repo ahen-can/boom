@@ -14,7 +14,10 @@
     },
     {
       "pattern": "SECTION",
-      "fill": {"section_number": "01", "section_title": "What we heard"}
+      "fill": {
+        "section_number": "01",
+        "section_title": "What we heard"
+      }
     },
     {
       "pattern": "TWO_COL",
@@ -22,9 +25,17 @@
       "fill": {
         "title": "Month-end close takes 12 days, twice the peer median, and most of it is manual",
         "left_head": "Where time goes today",
-        "left_body": ["38 spreadsheets feed the group consolidation", "Intercompany matching is done by email", "Reports are rebuilt by hand each month"],
+        "left_body": [
+          "38 spreadsheets feed the group consolidation",
+          "Intercompany matching is done by email",
+          "Reports are rebuilt by hand each month"
+        ],
         "right_head": "What this costs Northwind",
-        "right_body": ["Board packs arrive on day 15", "Two FTEs spend half their month on reconciliations", "Audit adjustments rose from 4 to 11 last year"],
+        "right_body": [
+          "Board packs arrive on day 15",
+          "Two FTEs spend half their month on reconciliations",
+          "Audit adjustments rose from 4 to 11 last year"
+        ],
         "source": "Source: Northwind RFP (Sept 2026), section 2.1; PwC close benchmarking survey 2025"
       },
       "notes": "Lead with the 12-day figure; the CFO quoted it in the kick-off call."
@@ -42,7 +53,11 @@
         "item3_body": "Free about 2 FTEs from reconciliations and put them on forecasting.",
         "source": "Source: Northwind RFP (Sept 2026), section 3"
       },
-      "icons": {"item1_icon": "target", "item2_icon": "data analytics", "item3_icon": "people"}
+      "icons": {
+        "item1_icon": "target",
+        "item2_icon": "data analytics",
+        "item3_icon": "people"
+      }
     },
     {
       "pattern": "OBJ_NUMBERED_4",
@@ -64,16 +79,71 @@
         "title": "A 16-week programme gets the first faster close in February",
         "item1_phase": "Diagnose",
         "item1_time": "Weeks 1-3",
-        "item1_body": ["Map the close calendar", "Interview 12 process owners", "Baseline effort per step"],
+        "item1_body": [
+          "Map the close calendar",
+          "Interview 12 process owners",
+          "Baseline effort per step"
+        ],
         "item2_phase": "Design",
         "item2_time": "Weeks 4-7",
-        "item2_body": ["Target close calendar", "Consolidation model design", "Control changes agreed with audit"],
+        "item2_body": [
+          "Target close calendar",
+          "Consolidation model design",
+          "Control changes agreed with audit"
+        ],
         "item3_phase": "Build",
         "item3_time": "Weeks 8-13",
-        "item3_body": ["Build and test the model", "Automate intercompany matching", "Train the close team"],
+        "item3_body": [
+          "Build and test the model",
+          "Automate intercompany matching",
+          "Train the close team"
+        ],
         "item4_phase": "Run",
         "item4_time": "Weeks 14-16",
-        "item4_body": ["Parallel run in January", "First 6-day close in February", "Handover and lessons learned"]
+        "item4_body": [
+          "Parallel run in January",
+          "First 6-day close in February",
+          "Handover and lessons learned"
+        ]
+      }
+    },
+    {
+      "pattern": "GOV_MATRIX",
+      "section": "Governance",
+      "fill": {
+        "title": "Three forums keep decisions moving without adding meetings",
+        "t1": [
+          [
+            "Activity",
+            "Weekly huddle",
+            "Fortnightly PMO",
+            "Monthly steering"
+          ],
+          [
+            "Review progress against the close calendar",
+            "✓",
+            "✓",
+            ""
+          ],
+          [
+            "Resolve red and amber issues",
+            "✓",
+            "✓",
+            ""
+          ],
+          [
+            "Approve design changes and control updates",
+            "",
+            "✓",
+            "✓"
+          ],
+          [
+            "Confirm go-live readiness",
+            "",
+            "",
+            "✓"
+          ]
+        ]
       }
     }
   ]

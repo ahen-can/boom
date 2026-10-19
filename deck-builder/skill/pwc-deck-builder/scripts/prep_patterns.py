@@ -2,11 +2,18 @@
 
     python prep_patterns.py my_slides.pptx [--out DIR] [--dry-run]
 
-Writes <name>_tokenised.pptx and <name>_prep_report.md. Nothing is changed in the input file.
+Writes, next to the input (or in --out):
+  <name>_tokenised.pptx  text replaced by {{slots}}, table cells by {{t1_r1c1}}, speaker notes replaced
+                         by a PATTERN block with the original text of each slot as EXAMPLE lines
+  <name>_prep_report.md  what was guessed, and what was left untouched (SmartArt, charts, odd text)
+  <name>_notes.csv       one row per slide to fill in (pattern, purpose, use_when, ...), then apply
+                         it with apply_notes.py
+Nothing is changed in the input file. Run it on the original slides, not on a tokenised copy.
 The guesses are positional (title at the top, source at the bottom, bold/larger text = item head,
 text below or beside a head = its body), so always review the result in PowerPoint before using it.
 """
 import argparse
+import csv
 import re
 import statistics
 import sys
@@ -74,8 +81,11 @@ def assign_tokens(slide, slide_h):
     cands, notes = [], []
     for shp, parents in dk.iter_shapes(slide.shapes):
         if not (getattr(shp, "has_text_frame", False) and shp.has_text_frame):
-            if getattr(shp, "has_table", False) and shp.has_table:
-                notes.append(f"table '{shp.name}' left as is: replace its text by hand or with tokens")
+            kind = frame_kind(shp)
+            if kind == "smartart":
+                notes.append(f"SmartArt '{shp.name}' left as is: right-click > Convert to Shapes, then rerun")
+            elif kind == "chart":
+                notes.append(f"chart '{shp.name}' left as is: charts are not filled yet (replace or delete it)")
             continue
         if ph_type(shp) in SKIP_PH_TYPES or not dk.shape_text(shp).strip() or dk.tokens_in(shp):
             continue
@@ -236,6 +246,79 @@ def tokenise(c):
         c.shp.name = c.token
 
 
+def frame_kind(shp):
+    if getattr(shp, "has_table", False) and shp.has_table:
+        return "table"
+    if getattr(shp, "has_chart", False) and shp.has_chart:
+        return "chart"
+    uri = shp._element.xpath(".//a:graphicData/@uri")
+    if uri and "diagram" in uri[0]:
+        return "smartart"
+    return None
+
+
+def snippet(text, n=70):
+    return " ".join(text.split()).replace("|", "/")[:n]
+
+
+def tokenise_tables(slide):
+    """Replace every table cell (empty ones too) with {{tN_rRcC}}. Returns [(name, rows, cols, {token: text})]."""
+    out, n = [], 0
+    for shp, _ in dk.iter_shapes(slide.shapes):
+        if frame_kind(shp) != "table":
+            continue
+        n += 1
+        name = f"t{n}"
+        examples = {}
+        tbl = shp.table
+        for r, row in enumerate(tbl.rows, 1):
+            for c, cell in enumerate(row.cells, 1):
+                text = cell.text_frame.text.strip()
+                if dk.TOKEN_RE.search(text) or cell.is_spanned:
+                    continue
+                tok = f"{name}_r{r}c{c}"
+                if text:
+                    examples[tok] = text
+                paras = cell.text_frame.paragraphs
+                for p in paras[1:]:
+                    p._p.getparent().remove(p._p)
+                runs = paras[0].runs
+                if runs:
+                    runs[0].text = f"{{{{{tok}}}}}"
+                    for x in runs[1:]:
+                        x._r.getparent().remove(x._r)
+                else:
+                    paras[0].text = f"{{{{{tok}}}}}"
+        shp.name = name
+        out.append((name, len(tbl.rows), len(tbl.columns), examples))
+    return out
+
+
+def leftover_text(slide):
+    """Text still on the slide after tokenising (labels, SmartArt, charts are reported elsewhere)."""
+    left = []
+    for shp, _ in dk.iter_shapes(slide.shapes):
+        txt = dk.TOKEN_RE.sub("", dk.shape_text(shp)).strip()
+        if txt and not LABEL_RE.match(txt) and ph_type(shp) not in SKIP_PH_TYPES:
+            left.append(f"{shp.name}: \"{snippet(txt, 50)}\"")
+    return left
+
+
+def notes_block(n, items, examples, tables):
+    item_line = ""
+    if items:
+        item_line = f"1-{len(items)}" if len(items) <= 8 else f"{len(items)} (complex layout: fill every slot)"
+    lines = [f"PATTERN: SLIDE_{n:03d}", "PURPOSE: ", "USE WHEN: ", f"ITEMS: {item_line}", "AVOID: "]
+    for name, rows, cols, _ in tables:
+        lines.append(f"TABLE {name}: {rows} rows x {cols} columns")
+    for tok, text in examples.items():
+        lines.append(f"EXAMPLE {tok}: {snippet(text, 80)}")
+    return "\n".join(lines)
+
+
+CSV_FIELDS = ["slide", "pattern", "purpose", "use_when", "items", "avoid", "slots", "examples"]
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("deck")
@@ -243,50 +326,72 @@ def main():
     ap.add_argument("--dry-run", action="store_true", help="only write the report")
     a = ap.parse_args()
     src = Path(a.deck)
+    if src.suffix.lower() != ".pptx":
+        sys.exit(f"{src.name}: only .pptx files can be read. Open it in PowerPoint and Save As .pptx first.")
     out_dir = Path(a.out) if a.out else src.parent
     out_dir.mkdir(parents=True, exist_ok=True)
     prs = dk.open_deck(src)
     slide_h = prs.slide_height / EMU_PER_IN
     report = [f"# Pattern prep report: {src.name}", "",
-              "Check each proposal in PowerPoint (Alt+F10 shows shape names). Fix tokens by editing the text,",
-              "then fill in PURPOSE / USE WHEN / ITEMS in each slide's notes and give PATTERN a real name.", ""]
+              "Review the tokenised deck in PowerPoint (Alt+F10 shows shape names). Then describe each",
+              "pattern: fill the notes CSV (or ask the ChatPwC agent to) and run apply_notes.py.", ""]
+    rows, flagged = [], []
     for n, slide in enumerate(prs.slides, 1):
         cands, notes = assign_tokens(slide, slide_h)
-        existing = dk.pattern_id(slide)
-        report.append(f"## Slide {n}" + (f" ({existing})" if existing else ""))
-        if not cands:
-            report.append("- no text to tokenise\n")
-            continue
-        report.append("| token | shape | at (x, y) in | font | original text |")
-        report.append("|---|---|---|---|---|")
+        report.append(f"## Slide {n}")
+        renamed = name_item_shapes(slide, cands) if cands else []
+        examples = {}
         for c in reading_order(cands):
-            snippet = c.text.replace("\n", " / ").replace("|", "/")[:70]
-            report.append(f"| `{{{{{c.token}}}}}` | {c.shp.name} | {c.x:.1f}, {c.y:.1f} | {c.size:.0f}pt"
-                          f"{' bold' if c.bold else ''} | {snippet} |")
-        renamed = name_item_shapes(slide, cands)
-        if renamed:
-            report.append(f"\nRenamed shapes: {', '.join(renamed)}")
+            examples[c.token] = c.text
+        if cands:
+            report.append("| token | shape | at (x, y) in | font | original text |")
+            report.append("|---|---|---|---|---|")
+            for c in reading_order(cands):
+                report.append(f"| `{{{{{c.token}}}}}` | {c.shp.name} | {c.x:.1f}, {c.y:.1f} | {c.size:.0f}pt"
+                              f"{' bold' if c.bold else ''} | {snippet(c.text)} |")
+            if renamed:
+                report.append(f"\nRenamed shapes: {', '.join(renamed)}")
         for c in cands:
             tokenise(c)
-        items = sorted({m.group(1) for c in cands if c.token and (m := dk.ITEM_RE.match(c.token))})
-        if not existing:
-            dk.set_notes(slide, f"PATTERN: SLIDE_{n:02d}\nPURPOSE: \nUSE WHEN: \n"
-                                f"ITEMS: {('1-' + str(len(items))) if items else ''}")
-            notes.append("speaker notes replaced with a PATTERN template (old notes removed)")
+        tables = tokenise_tables(slide)
+        for name, nr, nc, ex in tables:
+            report.append(f"- table `{name}`: {nr} rows x {nc} columns, every cell tokenised")
+            examples.update({k: v for k, v in ex.items() if int(dk.TABLE_TOKEN_RE.match(k).group(2)) <= 2})
+        items = sorted({m.group(1) for c in cands if c.token and (m := dk.ITEM_RE.match(c.token))},
+                       key=lambda x: int(x[4:]))
+        dk.set_notes(slide, notes_block(n, items, examples, tables))
         pics = [shp.name for shp, _ in dk.iter_shapes(slide.shapes)
                 if shp._element.tag == qn("p:pic") and "_icon" not in (shp.name or "")]
         if pics:
-            notes.append(f"pictures kept as they are: {', '.join(pics)} (remove client logos/photos)")
+            notes.append(f"pictures kept as they are: {', '.join(pics[:8])} (remove client logos/photos)")
+        left = leftover_text(slide)
+        if left:
+            notes.append("text NOT tokenised: " + "; ".join(left[:6]) + (" ..." if len(left) > 6 else ""))
+        if left or any("SmartArt" in x or "chart" in x for x in notes):
+            flagged.append(n)
         for note in notes:
             report.append(f"- {note}")
         report.append("")
+        slots = [c.token for c in reading_order(cands)] + [f"{t[0]} ({t[1]}x{t[2]} table)" for t in tables]
+        rows.append({"slide": n, "pattern": f"SLIDE_{n:03d}", "purpose": "", "use_when": "",
+                     "items": f"1-{len(items)}" if items else "", "avoid": "",
+                     "slots": ", ".join(slots),
+                     "examples": " | ".join(f"{k}={snippet(v, 40)}" for k, v in list(examples.items())[:25])})
+    report.insert(4, f"Slides needing a manual look (text left, SmartArt or charts): {flagged or 'none'}\n")
     rep_path = out_dir / f"{src.stem}_prep_report.md"
     rep_path.write_text("\n".join(report), encoding="utf-8")
     print(f"wrote {rep_path}")
+    csv_path = out_dir / f"{src.stem}_notes.csv"
+    with csv_path.open("w", newline="", encoding="utf-8-sig") as f:
+        w = csv.DictWriter(f, fieldnames=CSV_FIELDS)
+        w.writeheader()
+        w.writerows(rows)
+    print(f"wrote {csv_path}")
     if not a.dry_run:
         out = out_dir / f"{src.stem}_tokenised.pptx"
         prs.save(str(out))
         print(f"wrote {out}")
+    print(f"{len(rows)} slides; needing a manual look: {flagged or 'none'}")
 
 
 if __name__ == "__main__":

@@ -62,28 +62,63 @@ Shape names (Home → Arrange → Selection Pane, or Alt+F10) are needed only fo
 - **Item decoration** that is not grouped (a background box): `item1_bg`. Anything named `itemN...`
   is removed when item N is not used.
 
-## 5. Let the script propose slots (optional)
+## 5. Let the script add the slots
 
-Put the pasted, cleaned slides (still with their real text) in a file and run:
+Keep the slides with their real text (the script records it as an example for each slot) and run,
+from the repo folder in PowerShell:
 
-    python deck-builder/skill/pwc-deck-builder/scripts/prep_patterns.py my_slides.pptx --out private/
+    python deck-builder\skill\pwc-deck-builder\scripts\prep_patterns.py deck-builder\private\patterns_original.pptx --out deck-builder\private\prep
 
-You get `my_slides_tokenised.pptx` (slots filled in, items and icons named) and
-`my_slides_prep_report.md` (what it guessed, with the original text). Open the tokenised file,
-press Alt+F10 and check every slide. The guesses are positional, so expect to fix some.
+Always run it on the original slides, never on a tokenised copy. You get three files:
 
-## 6. Describe each pattern in its speaker notes
+| File | What it is |
+|---|---|
+| `patterns_original_tokenised.pptx` | Text replaced by slots, table cells by `{{t1_r1c1}}`, items and icons named, speaker notes replaced by a PATTERN block with the original text as `EXAMPLE` lines |
+| `patterns_original_prep_report.md` | Per slide: the slot it gave each piece of text, and anything it left alone. The top line lists the slides that need a manual look |
+| `patterns_original_notes.csv` | One row per slide, to describe the patterns (step 6) |
 
-The notes are how the agent knows when to use a pattern. Exactly this format:
+What it handles and what it does not:
+
+| On the slide | What happens |
+|---|---|
+| Text boxes, placeholders, grouped shapes | Slots (`title`, `tracker`, `source`, `itemN_head`, `itemN_body`, `textN`) |
+| Tables | Every cell becomes `{{tN_rRcC}}` (empty cells too); the plan fills a table as a list of rows |
+| Numbers and letters in badges ("1", "01", "A") | Left as they are on purpose |
+| SmartArt | Left alone and listed. Right-click → Convert to Shapes, save, run the script again |
+| Charts | Left alone and listed. Delete or replace with a table for now |
+| Text inside pictures | Cannot be changed. Replace the picture or drop the slide |
+
+Slot names on busy slides are positional (`item17_head`, `text9`). That is fine: the catalogue shows
+the agent the original text of every slot, so it knows what each one is for. Very busy slides (more
+than 8 items) are marked `complex layout: fill every slot`. Think about whether they are worth keeping.
+
+## 6. Describe each pattern
+
+Each pattern needs an ID and a description so the agent knows when to use it. With 100+ slides,
+let the ChatPwC agent draft them:
+
+1. In a chat with the Deck Builder agent, upload `..._tokenised.pptx` and `..._notes.csv` and say:
+   "Describe the patterns in this CSV and apply them."
+2. The agent fills `pattern`, `purpose`, `use_when`, `items`, `avoid` for every row (it writes `DROP` for
+   duplicates), runs `apply_notes.py` and gives you back `patterns.pptx` and the filled CSV.
+3. Open the CSV in Excel, fix what you disagree with (rename IDs, change DROP decisions), and apply it
+   yourself:
+
+       python deck-builder\skill\pwc-deck-builder\scripts\apply_notes.py deck-builder\private\prep\patterns_original_tokenised.pptx deck-builder\private\prep\patterns_original_notes.csv --out deck-builder\private\patterns.pptx
+
+The notes it writes look like this (you can also edit them in PowerPoint):
 
     PATTERN: OBJ_PILLARS_3
     PURPOSE: Three objectives as pillars under one goal
     USE WHEN: Objectives with one overarching goal and 2-3 supporting outcomes
     ITEMS: 2-3
     AVOID: More than 15 words per pillar
+    TABLE t1: 5 rows x 4 columns
+    EXAMPLE title: Three outcomes will tell the client the programme worked
 
-- `PATTERN` IDs: uppercase, unique, describe the shape (`OBJ_3COL`, `TEAM_4`, `TIMELINE_GANTT_6`).
-- Give each of your rotating objectives styles its own ID starting `OBJ_`, so the agent can rotate them.
+- `PATTERN` IDs: capitals, unique, describe the layout (`OBJ_3COL`, `TEAM_4`, `TIMELINE_GANTT_6`).
+- Give each of your rotating objectives styles its own ID starting `OBJ_`.
+- Keep the `EXAMPLE` and `TABLE` lines: the catalogue is built from them.
 
 ## 7. Check it
 

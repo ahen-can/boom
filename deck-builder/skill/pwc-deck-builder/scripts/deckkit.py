@@ -21,7 +21,10 @@ from pptx.util import Emu, Pt
 TOKEN_RE = re.compile(r"\{\{\s*([A-Za-z0-9_]+)\s*\}\}")
 ITEM_RE = re.compile(r"^(item\d+)(?:_|$)", re.I)
 PATTERN_RE = re.compile(r"^\s*PATTERN\s*:\s*([A-Za-z0-9_\-]+)", re.I | re.M)
-NOTE_FIELD_RE = re.compile(r"^\s*([A-Z][A-Z _-]+?)\s*:\s*(.+)$", re.M)
+NOTE_FIELD_RE = re.compile(r"^[ \t]*([A-Z][A-Z _-]+?)[ \t]*:[ \t]*(.*)$", re.M)
+EXAMPLE_RE = re.compile(r"^[ \t]*EXAMPLE[ \t]+([A-Za-z0-9_]+)[ \t]*:[ \t]*(.*)$", re.M)
+TABLE_NOTE_RE = re.compile(r"^[ \t]*TABLE[ \t]+(t\d+)[ \t]*:[ \t]*(.*)$", re.M)
+TABLE_TOKEN_RE = re.compile(r"^(t\d+)_r(\d+)c(\d+)$")
 R_ATTRS = (qn("r:id"), qn("r:embed"), qn("r:link"), qn("r:pict"))
 DEFAULT_FONT_PT = 18.0
 EMU_PER_PT = 12700
@@ -95,7 +98,24 @@ def pattern_id(slide) -> str | None:
 
 def pattern_meta(slide) -> dict:
     """All 'KEY: value' lines in the notes, e.g. PATTERN, PURPOSE, USE WHEN, ITEMS."""
-    return {k.strip().upper(): v.strip() for k, v in NOTE_FIELD_RE.findall(notes_text(slide))}
+    return {k.strip().upper(): v.strip() for k, v in NOTE_FIELD_RE.findall(notes_text(slide)) if v.strip()}
+
+
+def pattern_examples(slide) -> dict:
+    """'EXAMPLE slot: text' lines from the notes: the human text each slot replaced."""
+    return {k: v.strip() for k, v in EXAMPLE_RE.findall(notes_text(slide))}
+
+
+def table_dims(slide) -> dict:
+    """Tables with tokenised cells: {'t1': (rows, cols)} from the cell tokens on the slide."""
+    dims = {}
+    for t in slide_tokens(slide):
+        m = TABLE_TOKEN_RE.match(t)
+        if m:
+            r, c = int(m.group(2)), int(m.group(3))
+            pr, pc = dims.get(m.group(1), (0, 0))
+            dims[m.group(1)] = (max(pr, r), max(pc, c))
+    return dims
 
 
 def set_notes(slide, text: str):
@@ -220,8 +240,27 @@ def _fill_paragraph(paragraph, values: dict, filled: set, unfilled: set):
     return None
 
 
+def expand_tables(values: dict) -> tuple[dict, dict]:
+    """Turn table values (`"t1": [[row1 cells], [row2 cells]]`) into per-cell tokens (`t1_r1c1`).
+
+    Returns (values, rows_given) where rows_given = {"t1": number of rows supplied}. Rows the plan
+    does not supply are removed from the table; cells supplied as "" are blanked.
+    """
+    out, rows_given = dict(values), {}
+    for k, v in values.items():
+        if re.fullmatch(r"t\d+", k) and isinstance(v, list):
+            rows_given[k] = len(v)
+            for r, row in enumerate(v, 1):
+                for c, cell in enumerate(row if isinstance(row, list) else [row], 1):
+                    if cell is not None and str(cell).strip():
+                        out[f"{k}_r{r}c{c}"] = cell
+            del out[k]
+    return out, rows_given
+
+
 def fill_tokens(slide, values: dict) -> tuple[set, set]:
     """Fill {{tokens}} on a slide. Returns (filled, unfilled) token names. Unfilled tokens stay as text."""
+    values, _ = expand_tables(values)
     filled, unfilled = set(), set()
     for shp, _ in iter_shapes(slide.shapes):
         for tf in text_frames(shp):
@@ -238,9 +277,30 @@ def fill_tokens(slide, values: dict) -> tuple[set, set]:
     return filled, unfilled - filled
 
 
-def prune_unused(slide, filled: set, unfilled: set) -> list[str]:
+def _prune_table_rows(shp, unfilled: set, rows_given: dict) -> int:
+    """Remove table rows whose tokens were all left unfilled and that the plan did not supply."""
+    tbl = shp.table._tbl
+    if any(tc.get("rowSpan") not in (None, "1") or tc.get("vMerge") for tc in tbl.iter(qn("a:tc"))):
+        return 0  # merged rows: removing one would break the table, so only blank
+    gone = 0
+    for r_idx, tr in enumerate(list(tbl.tr_lst), 1):
+        toks = TOKEN_RE.findall("".join(t.text or "" for t in tr.iter(qn("a:t"))))
+        if not toks or not all(t in unfilled for t in toks):
+            continue
+        m = TABLE_TOKEN_RE.match(toks[0])
+        given = rows_given.get(m.group(1)) if m else None
+        if given is None or r_idx > given:
+            tr.getparent().remove(tr)
+            gone += 1
+    if gone:
+        shp.height = sum(row.height for row in shp.table.rows)
+    return gone
+
+
+def prune_unused(slide, filled: set, unfilled: set, rows_given: dict | None = None) -> list[str]:
     """Remove empty slots. Returns a list of what was removed or blanked.
 
+    - Table rows with only unfilled tokens, beyond the rows the plan supplied: removed.
     - An item (token prefix `itemN_`) with no filled tokens: remove every shape or group named `itemN...`
       and every shape whose tokens all belong to that item.
     - Any other shape whose text is only unfilled tokens: removed.
@@ -254,6 +314,15 @@ def prune_unused(slide, filled: set, unfilled: set) -> list[str]:
     def item_of(name):
         m = ITEM_RE.match(name or "")
         return m.group(1).lower() if m else None
+
+    for shp, _ in list(iter_shapes(slide.shapes)):
+        if not (getattr(shp, "has_table", False) and shp.has_table):
+            continue
+        names = {m.group(1) for t in tokens_in(shp) if (m := TABLE_TOKEN_RE.match(t))}
+        if names & set(rows_given or {}):
+            gone = _prune_table_rows(shp, unfilled, rows_given or {})
+            if gone:
+                removed.append(f"removed {gone} unused row(s) from table {shp.name}")
 
     for shp, parents in list(iter_shapes(slide.shapes)):
         if any(p._element.getparent() is None for p in parents) or shp._element.getparent() is None:

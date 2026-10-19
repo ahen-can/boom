@@ -220,6 +220,29 @@ def p_two_col(prs):
           "Current vs future state, challenge vs response, what we heard vs what it means")
 
 
+def p_table_matrix(prs):
+    s = prs.slides.add_slide(prs.slide_layouts[5])
+    header(s)
+    rows, cols = 7, 4
+    frame = s.shapes.add_table(rows, cols, Inches(0.5), Inches(1.7), Inches(12.3), Inches(0.5 * rows))
+    frame.name = "t1"
+    tbl = frame.table
+    tbl.columns[0].width = Inches(5.4)
+    for c in range(1, cols):
+        tbl.columns[c].width = Inches(2.3)
+    for r in range(rows):
+        for c in range(cols):
+            cell = tbl.cell(r, c)
+            cell.text = f"{{{{t1_r{r + 1}c{c + 1}}}}}"
+            run = cell.text_frame.paragraphs[0].runs[0]
+            run.font.size = Pt(12 if r == 0 else 11)
+            run.font.bold = r == 0
+    footer(s)
+    notes(s, "GOV_MATRIX", "Matrix of activities against forums, owners or phases, with ticks",
+          "Governance, RACI or activity-by-phase views with up to 6 rows and 3 columns")
+    s.notes_slide.notes_text_frame.text += "\nTABLE t1: 7 rows x 4 columns"
+
+
 def make_patterns():
     prs = Presentation()
     k = 13.333 / 10
@@ -234,6 +257,7 @@ def make_patterns():
     p_obj_numbered_4(prs)
     p_chevron_4(prs)
     p_two_col(prs)
+    p_table_matrix(prs)
     prs.save(str(ASSETS / "patterns.pptx"))
 
 
