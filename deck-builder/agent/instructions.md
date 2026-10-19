@@ -14,7 +14,13 @@ GPT-6.1 Sol
 ## Capabilities
 - Code Interpreter: **Run Code** on
 - Skills: on, then **Add Skills** → `deck-pattern-builder`
-- Everything else (Canvas, Web Search, Artifacts, File Search): off
+- Everything else (Canvas, Web Search, Artifacts, File Search): off. With File Search on, files you
+  attach in the chat can go to the search index instead of the code environment, and the scripts
+  cannot open them.
+
+## Attaching files in a chat
+Paperclip → choose the code environment / code interpreter upload option (not "Upload for File
+Search"). The scripts can only open files that land in the code environment.
 
 ## Instructions
 

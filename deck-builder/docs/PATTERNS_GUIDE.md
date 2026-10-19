@@ -97,11 +97,13 @@ than 8 items) are marked `complex layout: fill every slot`. Think about whether 
 Each pattern needs an ID and a description so the agent knows when to use it. With 100+ slides,
 let the ChatPwC agent draft them:
 
-1. In a chat with the Deck Builder agent, upload `..._tokenised.pptx` and `..._notes.csv` and say:
-   "Describe the patterns in this CSV and apply them."
+1. In a chat with the Deck Builder agent (File Search off in the agent builder), attach
+   `..._tokenised.pptx` and `..._notes.csv` with the paperclip's **code environment / code interpreter**
+   upload option, not File Search, and say: "Describe the patterns in this CSV and apply them."
 2. The agent fills `pattern`, `purpose`, `use_when`, `items`, `avoid` for every row (it writes `DROP` for
    duplicates), runs `apply_notes.py` and gives you back `patterns.pptx` and the filled CSV.
-3. Open the CSV in Excel, fix what you disagree with (rename IDs, change DROP decisions), and apply it
+3. Open the CSV in Excel, fix what you disagree with (Excel may show item ranges like `1-8` as dates
+   such as `01-Aug`; apply_notes.py turns them back, and new CSVs write `1 to 8` to avoid this) (rename IDs, change DROP decisions), and apply it
    yourself:
 
        python deck-builder\skill\deck-pattern-builder\scripts\apply_notes.py deck-builder\private\prep\patterns_original_tokenised.pptx deck-builder\private\prep\patterns_original_notes.csv --out deck-builder\private\patterns.pptx

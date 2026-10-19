@@ -24,6 +24,9 @@ The skill folder is usually `/mnt/data/skills/deck-pattern-builder/`. If not, fi
 
 ## Workflow
 
+Uploaded files the scripts need (decks, CSVs) must be in `/mnt/data`. If a file the user mentions is not
+there, ask them to attach it with the paperclip's code environment upload option, not File Search.
+
 1. **Read the material.** Extract the client, what they are asking for, the evaluation criteria,
    any required structure, deadlines and every number worth using. Write a brief of 6-10 lines and
    list open questions.
@@ -63,6 +66,9 @@ When the user asks for changes, edit plan.json and rebuild. Do not edit the .ppt
   It writes `<name>_tokenised.pptx`, `<name>_prep_report.md` and `<name>_notes.csv`. Share all three and
   point out the slides the report lists under "needing a manual look".
 - "Describe the patterns" (the user uploads `<name>_tokenised.pptx` and `<name>_notes.csv`):
+  0. The files must be in the code environment (`ls /mnt/data`). If they are not there, do not work from
+     file-search text: ask the user to attach both again with the paperclip's code environment / code
+     interpreter upload option, not File Search.
   1. For each CSV row, read `slots` and `examples` (the human text each slot replaced). If you can
      view images, render the deck with render.py and look at each slide too.
   2. Fill `pattern` (a unique ID in capitals describing the layout: `OBJ_3COL_ICONS`, `GOV_MATRIX_3`,

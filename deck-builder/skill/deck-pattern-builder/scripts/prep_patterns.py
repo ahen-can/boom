@@ -307,7 +307,7 @@ def leftover_text(slide):
 def notes_block(n, items, examples, tables):
     item_line = ""
     if items:
-        item_line = f"1-{len(items)}" if len(items) <= 8 else f"{len(items)} (complex layout: fill every slot)"
+        item_line = f"1 to {len(items)}" if len(items) <= 8 else f"{len(items)} (complex layout: fill every slot)"
     lines = [f"PATTERN: SLIDE_{n:03d}", "PURPOSE: ", "USE WHEN: ", f"ITEMS: {item_line}", "AVOID: "]
     for name, rows, cols, _ in tables:
         lines.append(f"TABLE {name}: {rows} rows x {cols} columns")
@@ -374,7 +374,7 @@ def main():
         report.append("")
         slots = [c.token for c in reading_order(cands)] + [f"{t[0]} ({t[1]}x{t[2]} table)" for t in tables]
         rows.append({"slide": n, "pattern": f"SLIDE_{n:03d}", "purpose": "", "use_when": "",
-                     "items": f"1-{len(items)}" if items else "", "avoid": "",
+                     "items": f"1 to {len(items)}" if items else "", "avoid": "",
                      "slots": ", ".join(slots),
                      "examples": " | ".join(f"{k}={snippet(v, 40)}" for k, v in list(examples.items())[:25])})
     report.insert(4, f"Slides needing a manual look (text left, SmartArt or charts): {flagged or 'none'}\n")

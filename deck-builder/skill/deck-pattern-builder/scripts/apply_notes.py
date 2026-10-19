@@ -16,6 +16,22 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import deckkit as dk  # noqa: E402
 
 ID_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
+MONTHS = {m: i for i, m in enumerate("jan feb mar apr may jun jul aug sep oct nov dec".split(), 1)}
+
+
+def fix_excel_range(value: str) -> str:
+    """Excel turns item ranges like 1-8 into dates (01-Aug, Aug-01, 1/8/2026). Turn them back."""
+    v = value.strip()
+    m = re.fullmatch(r"(\d{1,2})-([A-Za-z]{3})", v) or re.fullmatch(r"([A-Za-z]{3})-(\d{1,2})", v)
+    if m:
+        a, b = m.groups()
+        day, mon = (a, b) if a.isdigit() else (b, a)
+        if mon.lower() in MONTHS:
+            return f"{int(day)} to {MONTHS[mon.lower()]}"
+    m = re.fullmatch(r"(\d{1,2})/(\d{1,2})/\d{2,4}", v)
+    if m:
+        return f"{int(m.group(1))} to {int(m.group(2))}"
+    return v
 
 
 def main():
@@ -57,7 +73,7 @@ def main():
         keep = [ln for ln in dk.notes_text(slide).splitlines()
                 if dk.EXAMPLE_RE.match(ln) or dk.TABLE_NOTE_RE.match(ln)]
         head = [f"PATTERN: {pid}", f"PURPOSE: {r.get('purpose', '')}", f"USE WHEN: {r.get('use_when', '')}",
-                f"ITEMS: {r.get('items', '')}"]
+                f"ITEMS: {fix_excel_range(r.get('items', ''))}"]
         if r.get("avoid"):
             head.append(f"AVOID: {r['avoid']}")
         dk.set_notes(slide, "\n".join(head + keep))
