@@ -19,6 +19,8 @@ The skill folder is usually `/mnt/data/skills/deck-pattern-builder/`. If not, fi
 - `references/style_guide.md`: storyline flow, rhythm, density. Read before planning.
 - `references/writing_rules.md`: how to write every headline and box, and the banned phrases. Read before writing.
 - `references/storylines.md`: section orders and headlines from past human-made decks. Use as examples of flow and headline style only.
+- `references/icons.md`: the brand icon names. In plan.json `icons`, use one of these names (or close
+  keywords) for each icon slot. Icons are copied as vector shapes from `assets/icons.pptx`.
 - `references/plan_schema.md`: the plan.json format.
 - `scripts/`: `build_deck.py`, `check_deck.py`, `render.py`, `inventory.py`, `prep_patterns.py`, `extract_storylines.py`.
 
@@ -44,8 +46,11 @@ there, ask them to attach it with the paperclip's code environment upload option
    slide and contact sheets of 12 slides. For longer decks run the `next_chunk` it prints until all slides
    are done; never render more than 15 slides in one run. If you can view images, check each slide for
    overflow, overlaps and empty areas, fix, and rebuild. Show the contact sheets to the user.
-   If rendering fails, run `python $SKILL/scripts/render.py --diagnose`, show the user both JSON outputs
-   in full, and carry on with the hand-over: a failed render never blocks delivering the .pptx.
+   If a `.pptx` render times out, ask the user to export the deck to PDF in PowerPoint (File > Export >
+   PDF) and attach it to the code environment, then run
+   `python $SKILL/scripts/render.py /mnt/data/<deck>.pdf --labels-from /mnt/data/<deck>.pptx --slides 1-15`.
+   For other failures run `render.py --diagnose` and show the user its output. A failed render never
+   blocks delivering the .pptx.
 6. **Hand over.** Give the .pptx link from /mnt/data and a short list of what still needs a human:
    `[ICON: ...]` placeholders, warnings you left in place, facts you could not verify, open questions.
 
@@ -83,5 +88,9 @@ When the user asks for changes, edit plan.json and rebuild. Do not edit the .ppt
   3. Run `python $SKILL/scripts/apply_notes.py <tokenised.pptx> <notes.csv> --out /mnt/data/patterns.pptx`,
      fix any errors it lists, then show `python $SKILL/scripts/inventory.py /mnt/data/patterns.pptx --catalogue`.
   4. Give the user `patterns.pptx` and the filled CSV to review.
+- "Add keywords to the icons" (the user attaches `icons.csv`, and ideally `icons.pptx`): for each row, add
+  6-10 lowercase synonyms to `keywords` that a consultant might write when they want that icon (for
+  `shield`: risk compliance control security audit protection governance). If you can view images,
+  render `icons.pptx` and check each icon. Keep `name`, `slide` and `shape_id` unchanged. Give back the CSV.
 - "Learn from these decks": `python $SKILL/scripts/extract_storylines.py <decks...> --out /mnt/data/storylines.md`
   and share it. The user reviews it and adds it to the skill.

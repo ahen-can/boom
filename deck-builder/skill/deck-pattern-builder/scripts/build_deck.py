@@ -70,7 +70,7 @@ def validate(plan: dict, patterns: dict) -> tuple[list[str], list[str]]:
     return errors, warnings
 
 
-def build(plan: dict, patterns_path: Path, icons_dir: Path, out_dir: Path) -> dict:
+def build(plan: dict, patterns_path: Path, icons_dir: Path, out_dir: Path, icons_pptx: Path | None = None) -> dict:
     prs = dk.open_deck(patterns_path)
     patterns = dk.index_patterns(prs)
     errors, warnings = validate(plan, patterns)
@@ -78,7 +78,9 @@ def build(plan: dict, patterns_path: Path, icons_dir: Path, out_dir: Path) -> di
         return {"ok": False, "errors": errors, "warnings": warnings}
 
     originals = [s for s in prs.slides]
-    icon_index = dk.load_icon_index(icons_dir) if icons_dir.is_dir() else []
+    if icons_pptx is None:
+        icons_pptx = Path(patterns_path).with_name("icons.pptx")
+    library = dk.IconLibrary(icons_dir, icons_pptx)
     defaults = plan.get("defaults", {})
     log = []
 
@@ -96,8 +98,7 @@ def build(plan: dict, patterns_path: Path, icons_dir: Path, out_dir: Path) -> di
         for note in dk.prune_unused(slide, filled, unfilled, rows_given):
             log.append(f"slide {n}: {note}")
         for shape_name, query in spec.get("icons", {}).items():
-            png = dk.find_icon(query, icons_dir, icon_index) if icon_index else None
-            log.append(f"slide {n}: " + dk.set_icon(slide, shape_name, png, query))
+            log.append(f"slide {n}: " + dk.set_icon(slide, shape_name, query, library))
         for shp, _ in dk.iter_shapes(slide.shapes):
             note = dk.fit_text(shp)
             if note:
@@ -119,7 +120,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("plan")
     ap.add_argument("--patterns", default=str(dk.skill_dir() / "assets" / "patterns.pptx"))
-    ap.add_argument("--icons", default=str(dk.skill_dir() / "assets" / "icons"))
+    ap.add_argument("--icons", default=str(dk.skill_dir() / "assets" / "icons"), help="PNG icon folder")
+    ap.add_argument("--icons-pptx", default=None,
+                    help="vector icon deck with icons.csv next to it (default: icons.pptx next to the patterns)")
     ap.add_argument("--out", default=None, help="output folder (default /mnt/data, else current folder)")
     ap.add_argument("--validate-only", action="store_true")
     a = ap.parse_args()
@@ -131,7 +134,8 @@ def main():
         print(json.dumps({"ok": not errors, "errors": errors, "warnings": warnings}, indent=2))
         sys.exit(1 if errors else 0)
 
-    result = build(plan, Path(a.patterns), Path(a.icons), Path(a.out) if a.out else dk.default_out_dir())
+    result = build(plan, Path(a.patterns), Path(a.icons), Path(a.out) if a.out else dk.default_out_dir(),
+                   Path(a.icons_pptx) if a.icons_pptx else None)
     print(json.dumps(result, indent=2))
     sys.exit(0 if result["ok"] else 1)
 

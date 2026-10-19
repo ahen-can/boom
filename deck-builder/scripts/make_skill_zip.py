@@ -26,6 +26,9 @@ LIMIT_MB = 50
 
 
 def stage(args) -> Path:
+    if not SKILL_SRC.is_dir():
+        raise SystemExit(f"skill source not found at {SKILL_SRC}. Run this script from the downloaded repo "
+                         "(deck-builder/scripts/make_skill_zip.py), not from a copy in another folder.")
     tmp = Path(tempfile.mkdtemp(prefix="skillzip_")) / args.name
     shutil.copytree(SKILL_SRC, tmp, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"))
     if args.name != NAME:  # the skill name appears in SKILL.md's frontmatter and paths
@@ -43,6 +46,7 @@ def stage(args) -> Path:
 
     patterns = pick(args.patterns, "patterns.pptx")
     icons = pick(args.icons, "icons")
+    icons_pptx = pick(args.icons_pptx, "icons.pptx")
     storylines = pick(args.storylines, "storylines.md")
     style = pick(args.style_guide, "style_guide.md")
     rules = pick(args.writing_rules, "writing_rules.md")
@@ -54,6 +58,11 @@ def stage(args) -> Path:
         shutil.rmtree(tmp / "assets" / "icons")
         shutil.copytree(icons, tmp / "assets" / "icons")
         used["icons"] = icons
+    if icons_pptx:
+        add_icon_deck(Path(icons_pptx), tmp)
+        used["icons.pptx"] = icons_pptx
+        if not icons:  # real brand icons only: drop the dummy PNG set so it never wins a match
+            shutil.rmtree(tmp / "assets" / "icons")
     for src, rel in ((storylines, "storylines.md"), (style, "style_guide.md"), (rules, "writing_rules.md")):
         if src:
             shutil.copy2(src, tmp / "references" / rel)
@@ -63,6 +72,30 @@ def stage(args) -> Path:
     if not used:
         print("  using the repo's dummy assets")
     return tmp
+
+
+def add_icon_deck(src: Path, skill: Path):
+    """Copy the brand icon deck and its index into the skill; index it first if icons.csv is missing."""
+    sys.path.insert(0, str(skill / "scripts"))
+    import csv as _csv
+    import index_icons
+
+    index = src.with_suffix(".csv")
+    if index.is_file():
+        shutil.copy2(src, skill / "assets" / "icons.pptx")
+        shutil.copy2(index, skill / "assets" / "icons.csv")
+        with index.open(newline="", encoding="utf-8-sig") as f:
+            rows = list(_csv.DictReader(f))
+    else:
+        print(f"  {index.name} not found: indexing {src.name} now")
+        prs, rows = index_icons.index(src)
+        prs.save(str(skill / "assets" / "icons.pptx"))
+        with (skill / "assets" / "icons.csv").open("w", newline="", encoding="utf-8-sig") as f:
+            w = _csv.DictWriter(f, fieldnames=index_icons.FIELDS)
+            w.writeheader()
+            w.writerows(rows)
+    (skill / "references" / "icons.md").write_text(index_icons.icons_md(rows), encoding="utf-8")
+    print(f"  {len(rows)} vector icons from {src.name}")
 
 
 def validate(skill: Path):
@@ -104,9 +137,11 @@ def zip_dir(skill: Path, dest: Path, name: str):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--private", help="folder with patterns.pptx, icons/, storylines.md, style_guide.md")
+    ap.add_argument("--private", help="folder with patterns.pptx, icons.pptx (+ icons.csv), icons/, storylines.md, "
+                                      "style_guide.md, writing_rules.md (all optional)")
     ap.add_argument("--patterns")
-    ap.add_argument("--icons")
+    ap.add_argument("--icons", help="folder of PNG icons with icons_index.csv")
+    ap.add_argument("--icons-pptx", help="brand icon slides (icons.pptx, with icons.csv from index_icons.py next to it)")
     ap.add_argument("--storylines")
     ap.add_argument("--style-guide")
     ap.add_argument("--writing-rules")

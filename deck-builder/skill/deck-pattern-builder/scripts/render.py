@@ -1,11 +1,14 @@
 """Render a deck to PNGs (one per slide) and contact sheets, for visual checks.
 
     python render.py deck.pptx [--slides 1-15] [--out DIR] [--width 1280] [--timeout 150]
+    python render.py deck.pdf [--slides 1-15] [--labels-from deck.pptx]
     python render.py --diagnose
 
 Needs LibreOffice (soffice). PNGs come from PyMuPDF (pip-installed if missing), else pdftoppm.
 Big decks: render in chunks (--slides 1-15, then 16-30, ...) so each run stays inside the
-sandbox's time limit. Contact sheets hold 12 slides each and are labelled with the slide number
+sandbox's time limit. Large pictures are shrunk in the temporary copy before conversion (the deck
+itself is not changed). If LibreOffice still times out, export the deck to PDF in PowerPoint and
+render the PDF instead: no LibreOffice needed, and --labels-from adds the pattern IDs. Contact sheets hold 12 slides each and are labelled with the slide number
 and, for pattern libraries, the PATTERN ID.
 
 Always prints one JSON object. On failure it has "ok": false, the stage that failed, the error
@@ -56,7 +59,8 @@ def run_soffice(args, timeout):
         os.killpg(proc.pid, signal.SIGKILL)
         proc.communicate()
         raise RenderError("libreoffice", f"LibreOffice took longer than {timeout}s",
-                          "Render fewer slides per run, e.g. --slides 1-10, or raise --timeout if the sandbox allows.")
+                          "Render fewer slides per run (--slides 1-5), or ask the user to export the deck to PDF in "
+                          "PowerPoint and render the PDF with --labels-from <deck>.pptx.")
     return proc.returncode, out.decode(errors="ignore"), err.decode(errors="ignore")
 
 
@@ -74,6 +78,44 @@ def parse_slides(spec: str, total: int) -> list[int]:
     return picked
 
 
+def shrink_images(prs, max_px=1600, min_bytes=300_000) -> int:
+    """Downscale big raster images in place (only in the render copy). Returns how many were shrunk."""
+    import io
+
+    done = 0
+    for part in prs.part.package.iter_parts():
+        ct = getattr(part, "content_type", "")
+        if not ct.startswith("image/") or ct in ("image/svg+xml", "image/x-emf", "image/x-wmf"):
+            continue
+        blob = part.blob
+        if len(blob) < min_bytes:
+            continue
+        try:
+            im = Image.open(io.BytesIO(blob))
+            fmt = im.format or "PNG"
+            if max(im.size) <= max_px and len(blob) < 2 * min_bytes:
+                continue
+            im.thumbnail((max_px, max_px))
+            buf = io.BytesIO()
+            if fmt.upper() in ("JPEG", "JPG"):
+                im.convert("RGB").save(buf, "JPEG", quality=80)
+            else:
+                im.save(buf, fmt)
+            part._blob = buf.getvalue()
+            done += 1
+        except Exception:  # noqa: BLE001  (unreadable image: leave it)
+            continue
+    return done
+
+
+def pattern_labels(pptx: Path | None, numbers: list[int]) -> list[str]:
+    ids = {}
+    if pptx:
+        for n, s in enumerate(dk.open_deck(pptx).slides, 1):
+            ids[n] = dk.pattern_id(s)
+    return [f"Slide {n}" + (f"  {ids[n]}" if ids.get(n) else "") for n in numbers]
+
+
 def subset_deck(deck: Path, slides: list[int], work: Path) -> tuple[Path, list[str]]:
     """Copy of the deck with only the chosen slides (unused media drops out). Returns path and labels."""
     prs = dk.open_deck(deck)
@@ -86,6 +128,7 @@ def subset_deck(deck: Path, slides: list[int], work: Path) -> tuple[Path, list[s
     for n, s in reversed(list(enumerate(all_slides, 1))):
         if n not in keep:
             dk.delete_slide(prs, s)
+    shrink_images(prs)
     out = work / f"{deck.stem}_render_input.pptx"
     prs.save(str(out))
     return out, labels
@@ -115,18 +158,20 @@ def load_pymupdf():
             return None
 
 
-def pdf_to_pngs(pdf: Path, out: Path, width: int, numbers: list[int]) -> list[Path]:
+def pdf_to_pngs(pdf: Path, out: Path, width: int, numbers: list[int], pages: list[int] | None = None) -> list[Path]:
+    """Render PDF pages to PNGs named after their slide numbers. `pages` (1-based) picks pages; default all."""
     fitz = load_pymupdf()
     if fitz is not None:
         paths = []
         with fitz.open(str(pdf)) as doc:
-            for page, n in zip(doc, numbers):
+            chosen = [doc[p - 1] for p in pages] if pages else list(doc)
+            for page, n in zip(chosen, numbers):
                 zoom = width / page.rect.width
                 p = out / f"slide{n:03d}.png"
                 page.get_pixmap(matrix=fitz.Matrix(zoom, zoom)).save(str(p))
                 paths.append(p)
         return paths
-    if shutil.which("pdftoppm"):
+    if shutil.which("pdftoppm") and not pages:
         tmp = out / "_pages"
         tmp.mkdir(exist_ok=True)
         subprocess.run(["pdftoppm", "-png", "-scale-to-x", str(width), "-scale-to-y", "-1", str(pdf),
@@ -209,6 +254,7 @@ def main():
     ap.add_argument("--width", type=int, default=1280)
     ap.add_argument("--timeout", type=int, default=150, help="seconds allowed for LibreOffice (default 150)")
     ap.add_argument("--diagnose", action="store_true", help="test LibreOffice and image conversion on a 1-slide deck")
+    ap.add_argument("--labels-from", help="for a PDF: the .pptx it came from, to label sheets with pattern IDs")
     a = ap.parse_args()
 
     if a.diagnose:
@@ -221,14 +267,25 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     started = time.time()
     try:
-        total = len(dk.open_deck(deck).slides)
-        numbers = parse_slides(a.slides, total) if a.slides else list(range(1, total + 1))
-        work = Path(tempfile.mkdtemp(prefix="render_"))
-        src, labels = subset_deck(deck, numbers, work)
-        pdf = to_pdf(src, work, a.timeout)
-        final_pdf = out / f"{deck.stem}_{numbers[0]:03d}-{numbers[-1]:03d}.pdf"
-        shutil.move(str(pdf), final_pdf)
-        pngs = pdf_to_pngs(final_pdf, out, a.width, numbers)
+        if deck.suffix.lower() == ".pdf":
+            fitz = load_pymupdf()
+            if fitz is None:
+                raise RenderError("images", "PyMuPDF could not be installed", "Open the PDF to check the slides.")
+            with fitz.open(str(deck)) as doc:
+                total = doc.page_count
+            numbers = parse_slides(a.slides, total) if a.slides else list(range(1, total + 1))
+            labels = pattern_labels(Path(a.labels_from) if a.labels_from else None, numbers)
+            final_pdf = deck
+            pngs = pdf_to_pngs(deck, out, a.width, numbers, pages=numbers)
+        else:
+            total = len(dk.open_deck(deck).slides)
+            numbers = parse_slides(a.slides, total) if a.slides else list(range(1, total + 1))
+            work = Path(tempfile.mkdtemp(prefix="render_"))
+            src, labels = subset_deck(deck, numbers, work)
+            pdf = to_pdf(src, work, a.timeout)
+            final_pdf = out / f"{deck.stem}_{numbers[0]:03d}-{numbers[-1]:03d}.pdf"
+            shutil.move(str(pdf), final_pdf)
+            pngs = pdf_to_pngs(final_pdf, out, a.width, numbers)
         sheets = contact_sheets(pngs, labels, out, deck.stem)
     except RenderError as e:
         print(json.dumps({"ok": False, "stage": e.stage, "error": e.error, "hint": e.hint}, indent=2))

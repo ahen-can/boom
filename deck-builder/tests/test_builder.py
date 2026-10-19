@@ -66,10 +66,15 @@ def test_list_values_become_paragraphs(built):
 
 def test_icons_swapped(built):
     result, prs = built
-    assert any("item2_icon ← data.png" in line for line in result["log"])
+    log = result["log"]
+    assert any("item1_icon ← target.png" in line for line in log)  # PNG fallback
+    assert any("item3_icon ← icon 'team' (vector" in line for line in log)
     slide = prs.slides[3]
-    pic = dk.find_shape(slide, "item2_icon")
+    pic = dk.find_shape(slide, "item1_icon")
     assert pic is not None and pic.image.size == (256, 256)
+    team = dk.find_shape(slide, "item3_icon")  # vector group, fitted into the 0.7in slot
+    assert team.shape_type == 6 and max(team.width, team.height) <= 914400 * 0.7 + 10
+    assert "Team" not in dk.shape_text(team)  # label text dropped
 
 
 def test_relationships_resolve(built):
@@ -230,3 +235,23 @@ def test_apply_notes(tmp_path, built):
     r = subprocess.run([sys.executable, str(SCRIPTS / "apply_notes.py"), str(tmp_path / "human_tokenised.pptx"),
                         str(csv_path), "--out", str(tmp_path / "x.pptx")], capture_output=True, text=True)
     assert r.returncode == 1 and "must be unique" in r.stdout
+
+
+def test_index_icons_names_from_labels(tmp_path):
+    import index_icons
+    prs, rows = index_icons.index(SKILL / "assets" / "icons.pptx")
+    names = [r["name"] for r in rows]
+    assert names == ["innovation", "risk_and_compliance", "team", "growth", "data_and_analytics"]
+    lib = dk.IconLibrary(None, SKILL / "assets" / "icons.pptx")
+    assert lib.match("compliance")[1]["name"] == "risk_and_compliance"
+
+
+@pytest.mark.skipif(not (shutil.which("soffice") or shutil.which("libreoffice")), reason="no LibreOffice")
+def test_render_pdf_with_labels(tmp_path):
+    first = json.loads(subprocess.run([sys.executable, str(SCRIPTS / "render.py"), str(PATTERNS), "--slides", "1-3",
+                                       "--out", str(tmp_path / "a")], check=True, capture_output=True, text=True,
+                                      timeout=300).stdout)
+    out = json.loads(subprocess.run([sys.executable, str(SCRIPTS / "render.py"), first["pdf"], "--slides", "2-3",
+                                     "--labels-from", str(PATTERNS), "--out", str(tmp_path / "b")],
+                                    check=True, capture_output=True, text=True, timeout=300).stdout)
+    assert out["ok"] and [Path(p).name for p in out["slide_images"]] == ["slide002.png", "slide003.png"]

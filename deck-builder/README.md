@@ -45,9 +45,10 @@ All in `skill/deck-pattern-builder/scripts/`, Python 3.10+ with python-pptx.
 |---|---|
 | `build_deck.py plan.json` | Build a deck (add `--validate-only` to check the plan) |
 | `check_deck.py deck.pptx` | Quality checks |
-| `render.py deck.pptx` | PNG per slide and a contact sheet (needs LibreOffice) |
+| `render.py deck.pptx --slides 1-15` | PNG per slide and contact sheets (LibreOffice); also takes a PDF exported from PowerPoint |
 | `inventory.py deck.pptx` | Shapes, names, positions, text; `--layouts` for template layouts; `--catalogue` for the pattern catalogue |
 | `prep_patterns.py slides.pptx` | Add slots (text, tables), name items and icons, record example text, write a notes CSV |
+| `index_icons.py brand_icons.pptx` | Name the brand icons from their labels and write `icons.pptx`, `icons.csv`, `icons.md` |
 | `apply_notes.py deck.pptx notes.csv` | Write pattern IDs and descriptions from the CSV into the notes (`DROP` removes a slide) |
 | `extract_storylines.py --folder decks/` | Section order and headlines from past decks |
 

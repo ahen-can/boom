@@ -243,6 +243,61 @@ def p_table_matrix(prs):
     s.notes_slide.notes_text_frame.text += "\nTABLE t1: 7 rows x 4 columns"
 
 
+def make_icon_deck():
+    """A dummy 'brand icon slide': vector icons (groups and a freeform) and one picture, each labelled."""
+    import sys
+    sys.path.insert(0, str(SKILL / "scripts"))
+    import index_icons
+
+    prs = Presentation()
+    prs.slide_width, prs.slide_height = Inches(13.333), Inches(7.5)
+    s = prs.slides.add_slide(prs.slide_layouts[6])
+    text(s.shapes, "heading", 0.5, 0.3, 8, 0.6, "Icons", size=24, bold=True)
+
+    def label(x, y, value):
+        text(s.shapes, f"label {value}", x - 0.3, y + 1.0, 1.6, 0.4, value, size=11, align=PP_ALIGN.CENTER)
+
+    # lightbulb: circle + base
+    g = s.shapes.add_group_shape()
+    box(g.shapes, "bulb", MSO_SHAPE.OVAL, 1.0, 1.5, 0.8, 0.6, ACCENT)
+    box(g.shapes, "base", MSO_SHAPE.RECTANGLE, 1.25, 2.1, 0.3, 0.2, INK)
+    label(1.0, 1.5, "Innovation")
+    # shield
+    g = s.shapes.add_group_shape()
+    box(g.shapes, "shield", MSO_SHAPE.PENTAGON, 3.0, 1.5, 0.8, 0.8, ACCENT).rotation = 90
+    box(g.shapes, "dot", MSO_SHAPE.OVAL, 3.3, 1.8, 0.2, 0.2, WHITE)
+    label(3.0, 1.5, "Risk and compliance")
+    # people: two heads and shoulders
+    g = s.shapes.add_group_shape()
+    for dx in (0, 0.45):
+        box(g.shapes, "head", MSO_SHAPE.OVAL, 5.0 + dx, 1.5, 0.3, 0.3, ACCENT)
+        box(g.shapes, "body", MSO_SHAPE.ROUND_2_SAME_RECTANGLE, 4.95 + dx, 1.85, 0.4, 0.4, ACCENT)
+    label(5.0, 1.5, "Team")
+    # arrow drawn as a freeform
+    ff = s.shapes.build_freeform(Inches(7.0), Inches(2.3))
+    ff.add_line_segments([(Inches(7.4), Inches(1.5)), (Inches(7.8), Inches(2.3)), (Inches(7.55), Inches(2.3)),
+                          (Inches(7.55), Inches(2.4)), (Inches(7.25), Inches(2.4)), (Inches(7.25), Inches(2.3))])
+    arrow = ff.convert_to_shape()
+    arrow.fill.solid()
+    arrow.fill.fore_color.rgb = ACCENT
+    arrow.line.fill.background()
+    label(7.0, 1.5, "Growth")
+    # a picture icon
+    s.shapes.add_picture(str(ICONS / "data.png"), Inches(9.0), Inches(1.5), Inches(0.8), Inches(0.8))
+    label(9.0, 1.5, "Data and analytics")
+    src = ASSETS / "_icons_source.pptx"
+    prs.save(str(src))
+    out, rows = index_icons.index(src)
+    out.save(str(ASSETS / "icons.pptx"))
+    with (ASSETS / "icons.csv").open("w", newline="", encoding="utf-8-sig") as f:
+        w = csv.DictWriter(f, fieldnames=index_icons.FIELDS)
+        w.writeheader()
+        w.writerows(rows)
+    (SKILL / "references" / "icons.md").write_text(index_icons.icons_md(rows), encoding="utf-8")
+    src.unlink()
+    return rows
+
+
 def make_patterns():
     prs = Presentation()
     k = 13.333 / 10
@@ -263,5 +318,6 @@ def make_patterns():
 
 if __name__ == "__main__":
     make_icons()
+    print(f"icons.pptx: {[r['name'] for r in make_icon_deck()]}")
     make_patterns()
     print(f"wrote {ASSETS / 'patterns.pptx'} and {len(ICON_KEYWORDS)} icons")

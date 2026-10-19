@@ -1,69 +1,73 @@
-# Building the real skill on your PwC laptop
+# Building and uploading the real skill (PwC laptop)
 
-The repo holds the code and brand-neutral dummy assets. Your real pattern library, icons and
-storylines stay on your laptop and only go into the zip you upload to ChatPwC.
+The repo holds the code and dummy assets. Your pattern library, brand icons and storylines stay on
+your laptop and only go into the zip you upload to ChatPwC.
 
-## One-off setup
+## 1. Get the repo in one piece
 
-1. Download the repo: GitHub → `ahen-can/boom` → branch `claude/pwc-ppt-deck-builder-kqb3of` →
-   Code → Download ZIP. Unzip it, for example to `C:\work\boom`.
-2. Open the folder in VS Code. In the terminal:
+The scripts find each other by folder, so keep the repo's layout. Don't copy the `.py` files out
+into another folder.
 
-       pip install python-pptx
+1. GitHub → `ahen-can/boom` → branch `claude/pwc-ppt-deck-builder-kqb3of` → Code → Download ZIP.
+2. Unzip to `Desktop\repo\boom` (any folder works; the commands below assume you are in it).
+3. Once: `pip install python-pptx`
 
-3. Create a `private` folder inside `deck-builder` (it is git-ignored):
+## 2. Put your files in `deck-builder\private\`
 
-       deck-builder/
-         private/
-           patterns_original.pptx  your slides with their real text (input to prep_patterns.py)
-           prep/                   prep_patterns.py output: tokenised deck, report, notes CSV
-           patterns.pptx           the finished library (after apply_notes.py, docs/PATTERNS_GUIDE.md)
-           icons/               PNG icons + icons_index.csv
-           storylines.md        from extract_storylines.py
-           style_guide.md       optional: your edited copy of references/style_guide.md
-           writing_rules.md     optional: your edited copy of references/writing_rules.md
-           past_decks/          decks to learn storylines from (input only, never zipped)
+Create the folder (git ignores it) and copy in:
 
-## Icons
+| File | What it is |
+|---|---|
+| `patterns.pptx` | The finished library: the `patterns.pptx` ChatPwC gave you after applying the notes |
+| `brand_icons.pptx` | Only the 4-5 PwC icon and pictogram slides (copy them into a new file from the brand template) |
+| `past_decks\` | Optional: reference decks to learn storylines from |
 
-1. Export the icons you use from the brand template: right-click an icon → Save as Picture → PNG.
-   A transparent background and about 256 px square work well.
-2. Name files plainly: `handshake.png`, `shield_risk.png`.
-3. Create `icons_index.csv` in Excel and save as CSV:
+## 3. Shrink the pattern library (recommended)
 
-       file,name,keywords
-       handshake.png,handshake,partnership agreement collaboration trust
-       shield_risk.png,shield,risk security protection compliance
+Open `patterns.pptx` → select any picture → Picture Format → Compress Pictures → untick "Apply only to
+this picture" → 150 ppi → OK → Save. 30+ MB decks are slow to build and render in ChatPwC; this
+usually brings them under 10 MB with no visible change.
 
-The keywords are how the agent finds an icon from words like "risk management".
+## 4. Index the brand icons
 
-## Storylines
+From `Desktop\repo\boom` in PowerShell:
 
-    python deck-builder/skill/deck-pattern-builder/scripts/extract_storylines.py --folder deck-builder/private/past_decks --out deck-builder/private/storylines.md
+    python deck-builder\skill\deck-pattern-builder\scripts\index_icons.py deck-builder\private\brand_icons.pptx --out deck-builder\private
 
-Open the result and delete anything confidential that should not sit in the skill. Headlines and
-section orders are what matter.
+This writes `icons.pptx` (each icon named `icon:<name>`, check with Alt+F10), `icons.csv` and `icons.md`.
+Icons take their name from the text label under or beside them, so labelled icon slides give the
+best names. Unlabelled ones become `icon_s<slide>_<n>`: rename them in `icons.csv` if you like.
 
-## Build the zip
+Then make the icons findable: open `icons.csv` in Excel and add synonyms to the `keywords` column, or
+ask the agent ("Add keywords to the icons", attaching `icons.csv` and `icons.pptx` to the code
+environment) and save the CSV it returns over yours. Keep `slide` and `shape_id` as they are.
 
-    python deck-builder/scripts/make_skill_zip.py --private deck-builder/private
+## 5. Storylines (optional)
 
-It prints which of your files it used, the patterns it found and the zip size, and writes
-`deck-builder/dist/deck-pattern-builder.zip`. It stops if the zip is over 50 MB (compress the pictures
-in patterns.pptx with File → Compress Pictures).
+    python deck-builder\skill\deck-pattern-builder\scripts\extract_storylines.py --folder deck-builder\private\past_decks --out deck-builder\private\storylines.md
 
-## Test locally before uploading
+Read it and delete anything confidential.
 
-    python deck-builder/skill/deck-pattern-builder/scripts/build_deck.py deck-builder/tests/sample_plan.json --patterns deck-builder/private/patterns.pptx --icons deck-builder/private/icons --out deck-builder/private/out
+## 6. Build the zip
 
-The sample plan uses the dummy pattern IDs, so it will list unknown patterns. Copy it, change the
-pattern IDs and slot names to yours (see the catalogue), and run it again until it builds. Open the
-result in PowerPoint.
+    python deck-builder\scripts\make_skill_zip.py --private deck-builder\private
 
-## Upload to ChatPwC
+It prints the files it used, how many patterns and icons it found and the zip size, and writes
+`deck-builder\dist\deck-pattern-builder.zip`. It stops if the zip is over 50 MB (go back to step 3).
 
-1. Skills → find `deck-pattern-builder` → delete the old version (if any).
-2. Upload skill → `deck-builder/dist/deck-pattern-builder.zip`.
-3. Open the Deck Builder agent and check `deck-pattern-builder` is still in its skills list.
+## 7. Upload
 
-Repeat "Build the zip" and "Upload" every time you add patterns, icons or rules.
+1. ChatPwC → Skills → delete the old `deck-pattern-builder`.
+2. Upload skill → `deck-builder\dist\deck-pattern-builder.zip`.
+3. Open your agent → Skills → make sure `deck-pattern-builder` is selected. File Search off.
+
+Repeat steps 6 and 7 whenever you change patterns, icons, storylines or rules.
+
+## Optional: test on your laptop first
+
+    python deck-builder\skill\deck-pattern-builder\scripts\inventory.py deck-builder\private\patterns.pptx --catalogue
+
+shows what the agent will see. To build a test deck locally, copy `deck-builder\tests\sample_plan.json`,
+change the pattern IDs and slots to yours, and run:
+
+    python deck-builder\skill\deck-pattern-builder\scripts\build_deck.py my_plan.json --patterns deck-builder\private\patterns.pptx --icons-pptx deck-builder\private\icons.pptx --out deck-builder\private\out

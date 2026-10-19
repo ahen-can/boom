@@ -354,25 +354,72 @@ def load_icon_index(icons_dir: Path) -> list[dict]:
     if not idx.is_file():
         return [{"file": p.name, "name": p.stem, "keywords": p.stem.replace("_", " ")}
                 for p in sorted(icons_dir.glob("*.png"))]
-    with idx.open(newline="", encoding="utf-8-sig") as f:
-        return [{k.strip().lower(): (v or "").strip() for k, v in row.items()} for row in csv.DictReader(f)]
+    return read_csv(idx)
+
+
+def read_csv(path: Path) -> list[dict]:
+    with Path(path).open(newline="", encoding="utf-8-sig") as f:
+        return [{(k or "").strip().lower(): (v or "").strip() for k, v in row.items()} for row in csv.DictReader(f)]
+
+
+def _words(text: str) -> set[str]:
+    return set(re.findall(r"[a-z0-9]+", text.lower()))
+
+
+def _best_row(query: str, rows: list[dict], exact_keys=("name",)) -> tuple[dict | None, int]:
+    """Exact name match scores 100, otherwise the number of shared words with name + keywords."""
+    q = query.strip().lower()
+    words = _words(q)
+    best, best_score = None, 0
+    for row in rows:
+        if any(q == row.get(k, "").lower() for k in exact_keys):
+            return row, 100
+        score = len(words & _words(row.get("keywords", "") + " " + row.get("name", "").replace("_", " ")))
+        if score > best_score:
+            best, best_score = row, score
+    return best, best_score
 
 
 def find_icon(query: str, icons_dir: Path, index: list[dict] | None = None) -> Path | None:
-    """Exact file or name match first, then the best keyword overlap."""
+    """PNG icon: exact file or name match first, then the best keyword overlap."""
     index = index if index is not None else load_icon_index(icons_dir)
-    q = query.strip().lower()
-    words = set(re.findall(r"[a-z0-9]+", q))
-    best, best_score = None, 0
-    for row in index:
-        name = row.get("name", "").lower()
-        if q in (row.get("file", "").lower(), name):
-            return icons_dir / row["file"]
-        kw = set(re.findall(r"[a-z0-9]+", (row.get("keywords", "") + " " + name).lower()))
-        score = len(words & kw)
-        if score > best_score:
-            best, best_score = row, score
-    return icons_dir / best["file"] if best else None
+    row, _ = _best_row(query, index, ("name", "file"))
+    return icons_dir / row["file"] if row else None
+
+
+class IconLibrary:
+    """Icons from `icons.pptx` (vector shapes, indexed by icons.csv) and/or a PNG folder."""
+
+    def __init__(self, icons_dir: Path | None = None, icons_pptx: Path | None = None):
+        self.png_dir = icons_dir if icons_dir and Path(icons_dir).is_dir() else None
+        self.png_rows = load_icon_index(self.png_dir) if self.png_dir else []
+        self.deck, self.vec_rows = None, []
+        if icons_pptx and Path(icons_pptx).is_file():
+            index = Path(icons_pptx).with_suffix(".csv")
+            if index.is_file():
+                self.deck = Presentation(str(icons_pptx))
+                self.vec_rows = [r for r in read_csv(index) if r.get("slide") and r.get("shape_id")]
+
+    def __bool__(self):
+        return bool(self.png_rows or self.vec_rows)
+
+    def match(self, query: str):
+        """('vector', row) or ('png', path) or (None, None). Vector wins ties."""
+        vrow, vscore = _best_row(query, self.vec_rows)
+        prow, pscore = _best_row(query, self.png_rows, ("name", "file"))
+        if vrow and vscore >= pscore:
+            return "vector", vrow
+        if prow:
+            return "png", self.png_dir / prow["file"]
+        return None, None
+
+    def source_element(self, row):
+        slide = self.deck.slides[int(row["slide"]) - 1]
+        sid = row["shape_id"]
+        for shp, _ in iter_shapes(slide.shapes):
+            if str(shp.shape_id) == sid:
+                return slide, shp._element
+        return None, None
 
 
 def find_shape(slide, name: str):
@@ -382,15 +429,83 @@ def find_shape(slide, name: str):
     return None
 
 
-def set_icon(slide, shape_name: str, png: Path | None, query: str) -> str:
+def _xfrm(el):
+    """The a:xfrm that positions a shape, picture, group or graphic frame."""
+    for path in (f"{qn('p:spPr')}/{qn('a:xfrm')}", f"{qn('p:grpSpPr')}/{qn('a:xfrm')}", qn("p:xfrm")):
+        x = el.find(path)
+        if x is not None:
+            return x
+    return None
+
+
+def copy_shape_into(src_slide, src_el, dest_slide, box, parent_el, index) -> object:
+    """Copy a shape (vector group, freeform or picture) from another deck into `box` (left, top, w, h),
+    keeping its proportions, centred. Copies the images it uses. Text inside a copied group is dropped
+    (icon slides carry labels next to the icons)."""
+    new = copy.deepcopy(src_el)
+    if new.tag == qn("p:grpSp"):
+        for sp in list(new.iter(qn("p:sp"))):
+            if "".join(t.text or "" for t in sp.iter(qn("a:t"))).strip():
+                sp.getparent().remove(sp)
+    # images and other related parts
+    for el in new.iter():
+        for attr in R_ATTRS:
+            rid = el.get(attr)
+            if not rid:
+                continue
+            rel = src_slide.part.rels.get(rid) if hasattr(src_slide.part.rels, "get") else src_slide.part.rels[rid]
+            if rel is None or rel.is_external:
+                continue
+            src_part = rel.target_part
+            ext = str(src_part.partname).rsplit(".", 1)[-1]
+            from pptx.opc.package import Part
+            pkg = dest_slide.part.package
+            part = Part(pkg.next_partname(f"/ppt/media/image%d.{ext}"), src_part.content_type, pkg, src_part.blob)
+            el.set(attr, dest_slide.part.relate_to(part, rel.reltype))
+    # unique shape ids on the destination slide
+    used = [int(e.get("id")) for e in dest_slide._element.iter(qn("p:cNvPr")) if (e.get("id") or "").isdigit()]
+    nxt = max(used + [1]) + 1
+    for c in new.iter(qn("p:cNvPr")):
+        c.set("id", str(nxt))
+        nxt += 1
+    # fit into the box, keep proportions
+    x = _xfrm(new)
+    left, top, w, h = box
+    if x is not None:
+        off, ext = x.find(qn("a:off")), x.find(qn("a:ext"))
+        sw, sh = int(ext.get("cx")), int(ext.get("cy"))
+        scale = min(w / sw, h / sh) if sw and sh else 1
+        nw, nh = int(sw * scale), int(sh * scale)
+        off.set("x", str(int(left + (w - nw) / 2)))
+        off.set("y", str(int(top + (h - nh) / 2)))
+        ext.set("cx", str(nw))
+        ext.set("cy", str(nh))
+    parent_el.insert(index, new)
+    return new
+
+
+def set_icon(slide, shape_name: str, query: str, library: "IconLibrary | None" = None, png: Path | None = None) -> str:
+    """Put the best icon for `query` into the shape named `shape_name` (the slot keeps its box)."""
     shp = find_shape(slide, shape_name)
     if shp is None:
         return f"no shape named {shape_name}"
-    if png is None or not png.is_file():
+    kind, hit = ("png", png) if png is not None else (library.match(query) if library else (None, None))
+    if kind == "vector":
+        src_slide, src_el = library.source_element(hit)
+        if src_el is not None:
+            parent_el = shp._element.getparent()
+            new = copy_shape_into(src_slide, src_el, slide, (shp.left, shp.top, shp.width, shp.height),
+                                  parent_el, parent_el.index(shp._element))
+            new.find(f".//{qn('p:cNvPr')}").set("name", shape_name)
+            remove_shape(shp)
+            return f"{shape_name} ← icon '{hit['name']}' (vector, icons.pptx slide {hit['slide']})"
+        kind, hit = None, None
+    if kind != "png" or hit is None or not Path(hit).is_file():
         if getattr(shp, "has_text_frame", False) and shp.has_text_frame:
             shp.text_frame.text = f"[ICON: {query}]"
             return f"[ICON: {query}] placeholder in {shape_name}"
         return f"icon '{query}' not found; {shape_name} left as is"
+    png = Path(hit)
     blip = shp._element.find(".//" + qn("a:blip"))
     if blip is not None and shp._element.tag == qn("p:pic"):  # picture: swap the image, keep the frame
         _, rid = slide.part.get_or_add_image_part(str(png))
