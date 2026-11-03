@@ -27,7 +27,7 @@ NAME={'ACKO_Life_Mar_26':'Acko Life','ICICI_Life_insurance_co_-_q4fy26':'ICICI P
 'generali-central-q4fy26':'Generali Central Life','go-digit-march-2026':'Go Digit Life','hdfc_life_insurance_co_-_q4fy26':'HDFC Life',
 'indiaFirst-life-insurance-q4-2025-2026':'IndiaFirst Life','tata_aia_-_q4fy26':'Tata AIA Life','aegas-federal-life-q4fy26':'Ageas Federal Life',
 'aviva-life-q4-website-pd':'Aviva Life','bandhan-q4fy26':'Bandhan Life','bharti-life-q4fy26':'Bharti Life','canara-hsbc-q4fy26':'Canara HSBC Life',
-'sriram-life_q4_2026':'Shriram Life','star-union-daiichi-life-insurance':'Star Union Dai-ichi Life','edelweiss-life-insurance':'Edelweiss Life','1782ec5f-pramerica-life-insurance-q4fy26':'Pramerica Life','3ccf3c03-inlic-q4fy26':'Nippon India Life (INLIC)','69e944fe-ABSLI_-_q4fy26':'Aditya Birla Sun Life','sbi':'SBI Life','pnb':'PNB MetLife'}
+'sriram-life_q4_2026':'Shriram Life','star-union-daiichi-life-insurance':'Star Union Dai-ichi Life','edelweiss-life-insurance':'Edelweiss Life','1782ec5f-pramerica-life-insurance-q4fy26':'Pramerica Life','3ccf3c03-inlic-q4fy26':'IndusInd Nippon Life','69e944fe-ABSLI_-_q4fy26':'Aditya Birla Sun Life','sbi':'SBI Life','pnb':'PNB MetLife'}
 # Group total premium FY26 from L-25(ii) YTD grand total (Rs lakh)
 GRP={'ACKO_Life_Mar_26':18066,'ICICI_Life_insurance_co_-_q4fy26':1560887.24,'Kotak_mahindra_life_insurance_co_-_q4fy26':596678.01,'amli-q4fy26':241231,
 'bajaj-life-insurance-q4fy26':622244,'creditAccess-life-insruance-q4fy26':62558,'generali-central-q4fy26':61784,'go-digit-march-2026':132988.2,
