@@ -1,0 +1,52 @@
+{
+ "Summary": [
+  "LIC alone is ₹5,36,749 cr = ~54% of industry premium; it dominates Par (81%) and Pension & Annuity (72%), so private-only shares (in each tab) are the more useful benchmark for Bharti.",
+  "Health (₹53 cr) and variable insurance are excluded per scope; they total ~₹5,272 cr (≈0.5%) industry-wide, so exclusion barely moves shares.",
+  "LIC first-year-premium market share FY26: 56.66% (FY25: 57.05%) — LIC press release, 21 May 2026. [official source; read via web-search excerpt — verify against the document]",
+  "Caveat: shares here are on TOTAL premium (incl. renewals), which reflects the in-force book. New-business shares (IRDAI/Life Council FYP data) can differ materially — e.g. Bharti NBP grew 44% in FY26 to ₹1,069 cr, ~0.23% market share (IRDAI data as reported)."
+ ],
+ "Par Life": [
+  "Par is structurally an LIC category (₹2.83 lakh cr). Among privates it is a mid-sized book led by HDFC, Axis Max and SBI.",
+  "Market is shifting away from par: LIC's non-par share of individual APE rose to 35.11% in FY26 from 27.69% in FY25 (par 64.89%) — LIC press release, 21 May 2026. [official source; read via web-search excerpt — verify against the document]",
+  "HDFC Life FY26 individual APE: participating 25% — HDFC Life Q4 FY26 earnings call transcript (NSE filing). [official source; read via web-search excerpt — verify against the document]"
+ ],
+ "Non-Par Life": [
+  "This PD segment mixes three market categories: (a) term/protection, (b) non-par guaranteed savings, (c) group term & credit life. It cannot be split from PDs — use investor presentations (listed players) and product-level analysis in the next phase.",
+  "Pure-protection / credit-life players (Acko, Go Digit, CreditAccess) are 100% non-par life and largely group.",
+  "HDFC Life FY26 individual APE: non-par savings 18%, term 7% (5% in FY25) — Q4 FY26 earnings call transcript (NSE). [official source; read via web-search excerpt — verify against the document]",
+  "ICICI Pru FY26 APE mix: non-linked savings 20%, protection 18% — FY2026 investor presentation (BSE filing). [official source; read via web-search excerpt — verify against the document]",
+  "Axis Max Life FY26: retail protection & health APE +53%; total protection & health APE +40% to ₹1,885 cr — FY26 Integrated Annual Report. [official source; read via web-search excerpt — verify against the document]"
+ ],
+ "Linked": [
+  "ULIPs are the most private-sector-led category: SBI Life alone (~25%) exceeds LIC (~12%).",
+  "ICICI Pru FY26 APE: linked 48% of mix — FY2026 investor presentation (BSE). [official source; read via web-search excerpt — verify against the document]",
+  "HDFC Life FY26 individual APE: unit-linked 44% — Q4 FY26 earnings call transcript (NSE). [official source; read via web-search excerpt — verify against the document]"
+ ],
+ "Pension & Annuity": [
+  "Composition (industry): non-par pension ₹1.09 lakh cr (of which LIC ₹1.07 lakh cr — largely group superannuation/gratuity funds), non-par annuity ₹45,841 cr, linked pension ₹16,917 cr, par pension ₹2,365 cr.",
+  "Annuity is the growth pocket among privates: Axis Max annuity APE +113% to ₹1,050 cr in FY26 (FY26 Integrated Annual Report); HDFC annuity ~8% of individual APE in Q4 FY26 (earnings call); ICICI annuity 6% of FY26 APE (investor presentation). [official source; read via web-search excerpt — verify against the document]",
+  "Bharti reports NO annuity premium in FY26 and only ~₹64 cr of pension — a clear product-suite gap vs. peers."
+ ],
+ "Group": [
+  "LIC total group business premium income FY26: ₹1,96,609 cr (+16.26% YoY); group = 35.28% of LIC APE (₹23,626 cr) — LIC press release, 21 May 2026. [official source; read via web-search excerpt — verify against the document] (LIC's L-25(ii) was not supplied, so this figure is used for LIC).",
+  "Group premium here = L-25(ii) total (new business + renewal); it includes group term, credit life, and fund-based group (gratuity/superannuation/leave encashment). Fund business inflates LIC, SBI, HDFC, ICICI."
+ ],
+ "_method": [
+  "SCOPE: 25 life insurers (LIC + 24 private). Sahara Life does not publish. FY26 = year ended 31 March 2026.",
+  "METRIC: gross premium, line (a) \"Premium\" of Form L-1-A-RA (segmental revenue account), FY26 full year; FY25 from the same form's prior-year block. ₹ lakh ÷ 100 = ₹ crore (LIC reports in ₹ crore).",
+  "CATEGORIES: Par Life = PL; Non-Par Life = NL; Linked = LL; Pension & Annuity = PP + PA + NA + NP + LP. Excluded: Health (all), Variable insurance (all), LIC CRAC (₹0.85 cr).",
+  "GROUP: L-1-A-RA does not split individual vs group for most insurers, so group business stays inside its product segment (insurer-specific group columns, e.g. Bharti \"Group\", SUD/ABSLI/Edelweiss/INLIC group columns, were mapped to their product type). The Group tab is an OVERLAY from L-25(ii) YTD grand total and must not be added to the product tabs.",
+  "RECONCILIATION: for every insurer, sum of mapped segments = L-1 grand total (differences ≤ ₹2 lakh = rounding). See table below.",
+  "LIMITS: total premium includes renewals (book view, not new-business view). LIC FY25 segment split not supplied → LIC YoY shown as n.a. and excluded from category growth."
+ ],
+ "_sources": [
+  "Primary data: each insurer's Q4 FY26 IRDAI public disclosure (files listed above).",
+  "LIC press release 21 May 2026: https://licindia.in/documents/d/guest/final-press-release-q4-performance_21052026",
+  "LIC investor presentation FY26: https://licindia.in/documents/20121/93502/INVESTOR++PRESENTATION+FY26-FINAL+21.05.2026.pdf",
+  "HDFC Life Q4 FY26 earnings call transcript (NSE): https://nsearchives.nseindia.com/corporate/PRASAD_23042026224833_EarningsCallTranscript.pdf",
+  "ICICI Pru Life FY2026 investor presentation (BSE): https://www.bseindia.com/xml-data/corpfiling/AttachHis/f10475dc-bcf8-4b61-bcd1-9cfc02f3d611.pdf",
+  "Axis Max Life FY26 Integrated Annual Report: https://www.axismaxlife.com/static-page/assets/homepage/Integrated_Annual_Report_FY_2025_26_22578128ca.pdf",
+  "Axis Max Life FY26 earnings press release: https://www.axismaxlife.com/static-page/assets/homepage/Press%20Release%20-%20Axis%20Max%20Life%20FY26%20Earnings.pdf",
+  "NOTE: these sites are blocked from this analysis environment; figures were read from web-search excerpts of the official documents and should be checked against the source before external use."
+ ]
+}
