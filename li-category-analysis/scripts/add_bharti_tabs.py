@@ -1,6 +1,6 @@
 """Add two tabs to life_insurance_category_analysis_Q4FY26.xlsx without touching the existing ones:
   'Bharti portfolio' : Bharti's products by market category with FY26 new business premium (NBP),
-                       share of Bharti's category NBP, flagship, notable features, observations, suggestions.
+                       share of Bharti's category NBP, flagship, notable features, observations, points the comparison raises.
   'My view'          : input tab for the user (most talked-about companies and products).
 Inputs: data.json (phase 1), li-product-docs (product_features_v1.csv, features/ulip/*.json,
         sources/bharti-kpi/product_performance_FY24_to_H2FY27.pdf numbers typed below).
@@ -84,33 +84,34 @@ CATS = [
     ('ULIP', 'Linked', [
         'ULIP is 33.0% of Bharti\'s FY26 individual NBP, about Rs 309 cr (L-22 x L-38). Wealth Pro, Growth Shield Plus and Dream Shield Plus bring Rs 212 cr of it (69%); the other four ULIPs share about Rs 97 cr, not disclosed by product.',
         'Growth Shield Plus NBP rose from Rs 53.8 cr (FY25, launch year) to Rs 79.6 cr and nearly matches Wealth Pro. Its renewal proportion is low (32%) because the book is young.',
-        'Feature list v2: Bharti leads on refunds of charges (4 of 7 products return mortality charges; Wealth Maximizer refunds 118% of all charges) and has unlimited free switches.',
-        'Gaps against peers: no ULIP pension, no waiver of premium or child ULIP, no top-ups, no capital guarantee, no built-in accident cover.'],
-     ['Launch a ULIP pension with an assured vesting option (HDFC Click 2 Retire Plus II and SBI Retire Smart Plus are the reference designs).',
-      'Add a premium-waiver option or a child variant to a TULIP product (SBI Smart Scholar Plus has built-in payor waiver and accident cover).',
-      'Allow top-ups in Wealth Pro, the disclosed ULIP with the most policies in force.']),
+        'Feature list v5 (84 ULIPs read in full): Bharti leads on refunds of charges (5 of 7 products return mortality charges; Wealth Maximizer refunds 118% of all charges, fund management included, one of only 3 such ULIPs) and 6 of 7 allow unlimited free switches.',
+        'Against the 84: no pension or child ULIP; waiver of premium only through the Complete Shield rider, on disability or critical illness, not death (28 of 84 build it in or offer it as an option); top-ups not stated (38 of 84 allow them); additions are a % of fund value, where 32 of 84 add a fixed % of premium; index funds only in Grow Wealth Ultra (63 of 84 offer them).',
+        'Wealth Pro exits rose from 1% of policies in FY25 to 4% in FY26 and 7% in the first half of FY27 (Product Performance file, exit proportion).'],
+     ['Pension ULIPs with an assured vesting option exist at HDFC (Click 2 Retire Plus II) and SBI (Retire Smart Plus); Bharti has no pension ULIP.',
+      'SBI Smart Scholar Plus builds payor waiver and accident cover into a child ULIP; at Bharti, waiver comes only through a rider.',
+      'Wealth Pro, the disclosed ULIP with the most policies in force, costs customers about 1.8% a year at 8% gross, against 1.0-1.1% for Growth Shield Plus and Wealth Maximizer (our calculator, deliverable 06).']),
     ('Non-Par Savings', 'Non-Par Life', [
         'Guaranteed Wealth Pro is the largest disclosed product (Rs 113 cr NBP, Rs 530 cr total premium, 79% renewals), but its NBP fell from Rs 165 cr (FY24) and Rs 158 cr (FY25).',
         'Insta Gain and Guaranteed Bachat, both launched in FY26 (no opening policies), add Rs 97 cr of NBP between them.',
         'Non-par life NBP grew 37.2% in FY26 (L-22 row 1). Five non-par savings products are not in the disclosed list; their sales are part of the Rs 335 cr undisclosed non-linked NBP.',
         'Exact IRR is possible here because Bharti publishes factor tables (Income Laabh: about 4.2-4.3%). SBI, HDFC and Tata flagships do not publish them.',
         'White space (v1): no whole-life guaranteed income product.'],
-     ['Check Guaranteed Wealth Pro\'s IRR against peers (SBI Smart Platina Supreme, HDFC Sanchay Plus) once BIs are available. The NBP decline may be a pricing signal.',
-      'Consider a whole-life guaranteed income variant, a common design in leaders\' portfolios.']),
+     ['Guaranteed Wealth Pro\'s NBP fell 31% in two years while Insta Gain and Guaranteed Bachat grew. Its IRR against SBI Smart Platina Supreme and HDFC Sanchay Plus is not yet compared; that needs benefit illustrations.',
+      'Whole-life guaranteed income is a common design in leaders\' portfolios; Bharti has none (feature list v1).']),
     ('Par', 'Par Life', [
         'Unnati is the only par product in Bharti\'s disclosed list (Rs 43.9 cr NBP, down from Rs 57.3 cr in FY25). Par NBP fell 24.7% in FY26 (L-22 row 1).',
         'Par is 19% of Bharti\'s total premium, down from 38% in FY21 (phase 1 trend).',
         'White space (v1): no par whole life and no par pension.'],
-     ['Decide whether par is a growth line or a run-off line. If growth: a par whole-life plan with cash bonuses, the most common par design among leaders.']),
+     ['Par whole life with cash bonuses is the most common par design among the leaders; Bharti has none, and its par book is shrinking.']),
     ('Annuity', None, [
         'Swabhimaan Retirement (deferred pension) NBP rose from Rs 6.4 cr (FY24) to Rs 38.2 cr (FY26).',
         'The only immediate annuity is Saral Pension, the IRDAI standard product.',
         'Pension and annuity premium is about 2% of Bharti\'s book against about 18% for the industry.'],
-     ['Add a non-Saral immediate annuity (joint life, return of purchase price, increasing annuity options) to sell alongside Swabhimaan at vesting.']),
+     ['Bharti\'s only immediate annuity is the standard Saral Pension. Joint-life, return-of-purchase-price and increasing annuities are offered by the leaders.']),
     ('Protection', 'Non-Par Life', [
         'No protection product is in Bharti\'s disclosed list. Protection NBP sits inside the Rs 335 cr of non-linked NBP that is not disclosed by product, so its size is unknown.',
         'Flexi Term Pro has a return-of-premium option as well as pure term; Suraksha is a savings-oriented protection plan.'],
-     ['Premium quotes for a standard profile are needed before judging competitiveness (see the ULIP-style comparison planned for protection).']),
+     ['Competitiveness cannot be judged without premium quotes for a standard customer; these are not in public documents.']),
 ]
 
 ws = wb.create_sheet('Bharti portfolio')
@@ -196,7 +197,7 @@ for cname, pdcat, obs, sugg in CATS:
     ws.cell(r, 1, 'Observations').font = B; r += 1
     for o in obs:
         ws.cell(r, 1, '• ' + o).alignment = WR; ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=12); ws.row_dimensions[r].height = 30; r += 1
-    ws.cell(r, 1, 'Suggestions for discussion').font = B; r += 1
+    ws.cell(r, 1, 'Points the comparison raises (observations, not recommendations)').font = B; r += 1
     for s in sugg:
         x = ws.cell(r, 1, '• ' + s); x.alignment = WR; x.fill = SUB
         ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=12); ws.row_dimensions[r].height = 30; r += 1
